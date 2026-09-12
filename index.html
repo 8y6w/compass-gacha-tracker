@@ -16,7 +16,7 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
 .wrap{max-width:1000px;margin:auto;padding:14px 12px 100px}
 h1{font-size:23px;margin:8px 0 14px} h2,h3{margin:0 0 12px}
-.tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;position:sticky;top:0;background:rgba(19,21,27,.95);padding:8px 0;backdrop-filter:blur(10px);z-index:10}
+.tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;position:sticky;top:0;background:rgba(19,21,27,.95);padding:8px 0;backdrop-filter:blur(10px);z-index:10}
 button{border:0;border-radius:11px;padding:11px;background:#303646;color:white;font-weight:700}
 .tabs button{padding:10px 2px;font-size:11px}.tabs button.active{background:var(--gold);color:#111}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:11px 0}
@@ -37,6 +37,12 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 5px;b
 .detailCard{background:#171a21;border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0}
 .reportSel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;border:1px solid var(--line)}
+.shotGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+.shotGrid img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
+.shotPreview{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
+.shotPreview img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:99;padding:16px}
+.modal.open{display:flex}.modal img{max-width:100%;max-height:88vh;border-radius:10px}.modal button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px}
 .version{font-size:11px;color:#6f7787;text-align:center;margin-top:18px}
 @media(min-width:720px){.grid{grid-template-columns:repeat(6,1fr)}}
 </style>
@@ -51,6 +57,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
 <button data-tab="analysis">分析</button>
 <button data-tab="money">課金</button>
 <button data-tab="report">レポート</button>
+<button data-tab="history">履歴</button>
 <button data-tab="settings">設定</button>
 </div>
 
@@ -77,7 +84,10 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
   <label>かんたん入力（任意）</label><input id="quickInput" placeholder="例：SR 11:18 / UR 4:0">
   <button class="secondary" style="width:100%;margin-top:7px" onclick="parseQuick()">反映</button>
   <label>交換で入手したコラボUR（排出率には含めない）</label><input id="exchangeUR" type="number" min="0" value="0">
-  <label><input id="screenshotSaved" type="checkbox">スクショ保存済み</label>
+  <label>ガチャ結果スクショ（複数選択可）</label>
+  <input id="screenshotFiles" type="file" accept="image/*" multiple onchange="previewScreenshots(event)">
+  <div id="shotPreview" class="shotPreview"></div>
+  <p class="note">画像は自動で縮小・圧縮して、この端末内に保存します。</p>
   <label>メモ</label><textarea id="memo" rows="2" placeholder="任意"></textarea>
   <button class="primary" style="width:100%;margin-top:14px" onclick="addEntry()">保存</button>
  </div>
@@ -121,6 +131,19 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
+
+<section id="history" class="hidden">
+ <div class="card">
+  <h3>ガチャ履歴</h3>
+  <div id="historyList"></div>
+ </div>
+</section>
+
+<div id="imageModal" class="modal" onclick="closeImageModal()">
+ <button onclick="closeImageModal()">閉じる</button>
+ <img id="modalImage" alt="ガチャ結果スクショ">
+</div>
+
 <section id="settings" class="hidden">
  <div class="card">
   <h3>設定・バックアップ</h3>
@@ -135,7 +158,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
-<div class="version">v3.0</div>
+<div class="version">v3.1</div>
 </div>
 
 <script>
@@ -152,6 +175,7 @@ const DEFAULT_ENTRIES=[
 let entries=JSON.parse(localStorage.getItem("cg_entries")||"null");
 if(!entries){entries=DEFAULT_ENTRIES;localStorage.setItem("cg_entries",JSON.stringify(entries))}
 entries=entries.map(e=>({...e,exchangeUR:Number(e.exchangeUR||0),screenshotSaved:Boolean(e.screenshotSaved)}));
+let pendingScreenshots=[];
 let purchases=JSON.parse(localStorage.getItem("cg_purchases")||"[]");
 let settings=JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"cur":1,"bm":5000}');
 const $=id=>document.getElementById(id);
@@ -164,6 +188,85 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden");render();
 });
+
+
+function openImageDB(){
+ return new Promise((resolve,reject)=>{
+  const req=indexedDB.open("compass_gacha_images",1);
+  req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains("shots"))db.createObjectStore("shots",{keyPath:"id"})};
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+}
+async function saveShot(entryId,blob){
+ const db=await openImageDB();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction("shots","readwrite");
+  tx.objectStore("shots").put({id:entryId+"_"+Date.now()+"_"+Math.random().toString(36).slice(2),entryId,blob});
+  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+ });
+}
+async function getShots(entryId){
+ const db=await openImageDB();
+ return new Promise((resolve,reject)=>{
+  const req=db.transaction("shots","readonly").objectStore("shots").getAll();
+  req.onsuccess=()=>resolve(req.result.filter(x=>String(x.entryId)===String(entryId)));
+  req.onerror=()=>reject(req.error);
+ });
+}
+async function deleteShot(id){
+ const db=await openImageDB();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction("shots","readwrite");tx.objectStore("shots").delete(id);
+  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+ });
+}
+async function deleteShotsForEntry(entryId){
+ const shots=await getShots(entryId);for(const s of shots)await deleteShot(s.id);
+}
+async function compressImage(file){
+ const bitmap=await createImageBitmap(file);
+ const max=1400,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+ const c=document.createElement("canvas");c.width=Math.round(bitmap.width*scale);c.height=Math.round(bitmap.height*scale);
+ c.getContext("2d").drawImage(bitmap,0,0,c.width,c.height);
+ return await new Promise(r=>c.toBlob(r,"image/jpeg",0.78));
+}
+async function previewScreenshots(ev){
+ pendingScreenshots=[...ev.target.files];
+ const box=$("shotPreview");box.innerHTML="";
+ for(const f of pendingScreenshots){const u=URL.createObjectURL(f);const img=document.createElement("img");img.src=u;img.onload=()=>URL.revokeObjectURL(u);box.appendChild(img)}
+}
+function openImageModal(url){$("modalImage").src=url;$("imageModal").classList.add("open")}
+function closeImageModal(){$("imageModal").classList.remove("open");$("modalImage").src=""}
+async function renderHistory(){
+ const box=$("historyList");if(!box)return;
+ const sorted=[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+ if(!sorted.length){box.innerHTML='<div class="note">記録なし</div>';return}
+ box.innerHTML="";
+ for(const e of sorted){
+  const shots=await getShots(e.id);
+  const div=document.createElement("div");div.className="entry";
+  div.innerHTML=`<div class="entry-title"><span>${esc(e.collab)}</span><span>${esc(e.date)}</span></div>
+   <div class="muted">${e.pulls}連 / UR 常設${e.urNormal}・コラボ${e.urCollab} / SR 常設${e.srNormal}・コラボ${e.srCollab}${e.exchangeUR?` / 交換UR ${e.exchangeUR}`:""}</div>
+   ${e.memo?`<div class="note">${esc(e.memo)}</div>`:""}
+   <div class="shotGrid"></div>
+   <div class="actions">
+    <label style="margin:0"><span class="pill">画像追加</span><input type="file" accept="image/*" multiple style="display:none"></label>
+    <button class="danger">記録を削除</button>
+   </div>`;
+  const grid=div.querySelector(".shotGrid");
+  for(const s of shots){
+   const u=URL.createObjectURL(s.blob),wrap=document.createElement("div");
+   wrap.innerHTML=`<img alt="スクショ"><button class="danger" style="width:100%;padding:6px;margin-top:3px">画像削除</button>`;
+   wrap.querySelector("img").src=u;wrap.querySelector("img").onclick=()=>openImageModal(u);
+   wrap.querySelector("button").onclick=async()=>{if(confirm("この画像を削除しますか？")){URL.revokeObjectURL(u);await deleteShot(s.id);renderHistory()}};
+   grid.appendChild(wrap);
+  }
+  const fileInput=div.querySelector('input[type=file]');
+  fileInput.onchange=async ev=>{for(const f of [...ev.target.files])await saveShot(e.id,await compressImage(f));renderHistory()};
+  div.querySelector(".actions > button").onclick=async()=>{if(confirm("このガチャ記録と画像を削除しますか？")){await deleteShotsForEntry(e.id);entries=entries.filter(x=>x.id!==e.id);localStorage.setItem("cg_entries",JSON.stringify(entries));render();renderHistory()}};
+  box.appendChild(div);
+ }
+}
 
 function totals(list=entries){
  let t={pulls:0,urNormal:0,urCollab:0,srNormal:0,srCollab:0,exchangeUR:0};
@@ -244,7 +347,7 @@ function render(){
    <div class="note" style="margin-top:8px">${remain===0?"800連到達済み":`あと ${remain}連 / 60連単位なら ${batches}回（${batches*60}連）/ 約 ${needBM.toLocaleString()}BM`}</div></div>`
  }).join("");
 
- renderMoney(); setupReportSelectors(); renderReport();
+ renderMoney(); setupReportSelectors(); renderReport(); renderHistory();
 }
 
 function buildTrendSvg(list){
@@ -261,15 +364,17 @@ function buildTrendSvg(list){
  <text x="${W-pad}" y="${H-10}" fill="#9fa7b7" font-size="12" text-anchor="end">${maxX}連</text></svg>`;
 }
 
-function addEntry(){
+async function addEntry(){
  const e={id:Date.now(),date:$("date").value,collab:$("collabName").value.trim(),pulls:+$("pulls").value,
  urNormal:+$("urNormal").value,urCollab:+$("urCollab").value,srNormal:+$("srNormal").value,srCollab:+$("srCollab").value,
- exchangeUR:+$("exchangeUR").value,screenshotSaved:$("screenshotSaved").checked,memo:$("memo").value.trim()};
+ exchangeUR:+$("exchangeUR").value,screenshotSaved:pendingScreenshots.length>0,memo:$("memo").value.trim()};
  if(!e.date||!e.collab||e.pulls<=0){alert("日付・コラボ名・連数を入力してください");return}
  if(e.urNormal+e.urCollab+e.srNormal+e.srCollab>e.pulls){alert("UR+SRが連数を超えています");return}
  entries.push(e);localStorage.setItem("cg_entries",JSON.stringify(entries));
+ try{for(const f of pendingScreenshots)await saveShot(e.id,await compressImage(f))}catch(err){alert("記録は保存しましたが、一部画像の保存に失敗しました")}
  ["urNormal","urCollab","srNormal","srCollab","exchangeUR"].forEach(id=>$(id).value=0);
- $("collabName").value="";$("quickInput").value="";$("memo").value="";$("screenshotSaved").checked=false;$("pulls").value=60;
+ $("collabName").value="";$("quickInput").value="";$("memo").value="";$("pulls").value=60;
+ $("screenshotFiles").value="";$("shotPreview").innerHTML="";pendingScreenshots=[];
  alert("保存しました");render();
 }
 
@@ -318,7 +423,13 @@ function renderReport(){
 
 function saveSettings(){settings={ur:+$("rateUR").value,sr:+$("rateSR").value,cur:+$("rateCUR").value,bm:+$("bmPer60").value};localStorage.setItem("cg_settings",JSON.stringify(settings));render();alert("保存しました")}
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings},null,2),"application/json")}
+async function exportJSON(){
+ const db=await openImageDB();
+ const shots=await new Promise((resolve,reject)=>{const req=db.transaction("shots","readonly").objectStore("shots").getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+ const images=[];
+ for(const s of shots){const data=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(s.blob)});images.push({id:s.id,entryId:s.entryId,data})}
+ dl("compass-gacha-full-backup.json",JSON.stringify({entries,purchases,settings,images},null,2),"application/json");
+}
 function exportCSV(){
  const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,exchange_ur,screenshot_saved,memo\n";
  const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.exchangeUR,e.screenshotSaved,e.memo].map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -326,7 +437,17 @@ function exportCSV(){
 }
 function importJSON(ev){
  const f=ev.target.files[0];if(!f)return;const r=new FileReader();
- r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
+ r.onload=async()=>{try{
+  const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;
+  localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));
+  if(Array.isArray(x.images)){
+   const db=await openImageDB(),tx=db.transaction("shots","readwrite"),store=tx.objectStore("shots");store.clear();
+   for(const im of x.images){const blob=await (await fetch(im.data)).blob();store.put({id:im.id,entryId:im.entryId,blob})}
+   await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+  }
+  location.reload();
+ }catch(err){alert("読み込みに失敗しました")}};
+ r.readAsText(f);
 }
 render();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
