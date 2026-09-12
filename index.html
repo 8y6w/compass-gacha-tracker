@@ -38,6 +38,16 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 5px;b
 .reportSel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;border:1px solid var(--line)}
 .version{font-size:11px;color:#6f7787;text-align:center;margin-top:18px}
+
+.rate-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.rate-toolbar>*{flex:1 1 130px}
+.rate-file{padding:9px 0;border-bottom:1px solid var(--line)}.rate-file:last-child{border-bottom:0}
+.rate-point-row{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:end;margin:7px 0}.rate-point-row button{padding:10px}
+.rate-preview{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}.rate-estimate{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:12px}
+.conf-high{color:var(--good)}.conf-mid{color:var(--gold)}.conf-low{color:var(--bad)}
+.ocr-status{padding:10px;border-radius:11px;background:#14171e;border:1px solid var(--line);margin-top:9px;font-size:12px;color:var(--muted)}
+.rate-chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0;font-size:12px;color:var(--muted)}
+.file-input{padding:8px}.smallbtn{padding:8px 10px;font-size:12px}.nowrap{white-space:nowrap}
+@media(max-width:520px){.rate-preview{grid-template-columns:1fr}.rate-point-row{grid-template-columns:1fr 1fr auto}}
 @media(min-width:720px){.grid{grid-template-columns:repeat(6,1fr)}.tabs{grid-template-columns:repeat(8,1fr)}}
 </style>
 </head>
@@ -124,27 +134,52 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
 
 <section id="rate" class="hidden">
  <div class="card">
-  <h3>シーズン最終ボーダー予想</h3>
+  <h3>シーズン設定</h3>
+  <label>シーズン名</label><input id="rateSeasonName" placeholder="例：2026年9月シーズン">
   <div class="row">
-   <div><label>予想する順位</label><select id="rateTarget"><option value="500">500位（銀）</option><option value="5000">5000位（銅）</option></select></div>
-   <div><label>現在値を確認した曜日</label><select id="rateDay"><option value="fri">金曜 20時</option><option value="wed">水曜 20時</option><option value="mon">月曜 20時</option></select></div>
+   <div><label>シーズン終了日時</label><input id="rateSeasonEnd" type="datetime-local"></div>
+   <div><label>安全マージン</label><input id="rateMargin" type="number" min="0" step="10" value="50"></div>
   </div>
-  <label>現在のボーダー</label>
-  <div class="row"><select id="rateBorderRank"></select><input id="rateBorderPt" type="number" min="0" step="1" value="25" placeholder="pt"></div>
-  <label>自分の現在レート（任意）</label>
-  <div class="row"><select id="rateSelfRank"><option value="">入力しない</option></select><input id="rateSelfPt" type="number" min="0" step="1" placeholder="pt"></div>
-  <label>安全マージン</label><input id="rateMargin" type="number" min="0" step="10" value="50">
-  <button class="primary" style="width:100%;margin-top:14px" onclick="predictRate()">最終ボーダーを予想</button>
-  <p class="note">過去の同じ曜日から最終日までの伸びを比較し、現在値に近いシーズンを重めにして予想します。内蔵データはcmnsの5pt刻みを含むため、1pt単位の確定値ではありません。</p>
+  <label>自分の現在pt（任意）</label><input id="rateSelfBp" type="number" min="0" step="1" placeholder="例：4644">
+  <button class="secondary" style="width:100%;margin-top:12px" onclick="saveRateSeasonSettings()">シーズン設定を保存</button>
+  <p class="note">終了日時を入れると、残り時間・直近の伸び・過去シーズンの伸びを組み合わせて最終ボーダーを予想します。</p>
  </div>
- <div class="card"><h3>予想結果</h3><div id="rateResult"><div class="note">現在のボーダーを入力して「最終ボーダーを予想」を押してください。</div></div></div>
- <div class="card"><h3>似ている過去シーズン</h3><div id="rateSimilar"><div class="note">予想すると表示されます。</div></div></div>
+
+ <div class="card">
+  <h3 id="rateEditorTitle">現在ボーダーを追加</h3>
+  <div class="row">
+   <div><label>確認日時</label><input id="rateObservedAt" type="datetime-local" onchange="updateObservedAtLabel()"></div>
+   <div><label>曜日</label><div id="rateObservedDay" class="detailCard" style="margin:0;padding:11px">-</div></div>
+  </div>
+  <div class="actions"><button class="secondary" onclick="setRateObservedNow()">現在日時を入れる</button></div>
+
+  <label>ランキングのスクショ（複数選択可）</label>
+  <input id="rateScreenshots" class="file-input" type="file" accept="image/*" multiple onchange="handleRateScreenshotFiles(event)">
+  <div id="rateFileList" class="note" style="margin-top:8px">スクショ未選択</div>
+  <button class="primary" style="width:100%;margin-top:10px" onclick="runRateOCR()">スクショから順位・ptを読み取る</button>
+  <div id="rateOcrStatus" class="ocr-status">OCRは保存前に必ず結果を確認・修正できます。初回のOCRにはネット接続が必要です。</div>
+
+  <div class="entry-title" style="margin-top:16px"><span>読み取り結果</span><span class="muted">順位 / pt</span></div>
+  <div id="ratePointEditor"></div>
+  <button class="secondary" style="width:100%;margin-top:8px" onclick="addRatePoint()">手動で1件追加</button>
+
+  <div id="rateEstimatePreview" style="margin-top:12px"></div>
+  <label>メモ（任意）</label><input id="rateObservationMemo" placeholder="例：フォロー欄2枚">
+  <button id="rateObservationSaveBtn" class="primary" style="width:100%;margin-top:12px" onclick="saveRateObservation()">この観測を保存</button>
+  <button id="rateObservationCancelBtn" class="secondary hidden" style="width:100%;margin-top:8px" onclick="cancelRateObservationEdit()">編集をキャンセル</button>
+  <p class="note">画像内に500位・5000位そのものがいなくても、上下の順位とptから補間します。片側しかない場合は外挿になるため信頼度を下げます。</p>
+ </div>
+
+ <div class="card"><h3>現在の推定・最終予想</h3><div id="rateDashboard"><div class="note">観測データを保存すると表示されます。</div></div></div>
+ <div class="card"><h3>ボーダー推移</h3><div id="rateTrendChart"><div class="note">観測データなし</div></div><div class="rate-chart-legend"><span>500位</span><span>5000位</span></div></div>
+ <div class="card"><h3>観測履歴</h3><div id="rateObservationHistory"><div class="note">観測データなし</div></div></div>
+
  <details class="card">
   <summary style="font-weight:800;cursor:pointer">正確な過去データを追加</summary>
-  <p class="note">cmnsの丸め値ではなく、Appliv Gamesなどで1pt単位の値が確認できた場合に追加できます。同じシーズン・順位・曜日は追加データを優先します。</p>
+  <p class="note">内蔵の過去データは5pt刻みを含みます。1pt単位の値が分かった場合はここから追加でき、同じシーズン・順位・曜日では追加データを優先します。</p>
   <label>シーズン名</label><input id="histSeason" placeholder="例：2026年3月 勇者">
-  <div class="row"><div><label>順位</label><select id="histTarget"><option value="500">500位</option><option value="5000">5000位</option></select></div><div><label>曜日</label><select id="histDay"><option value="fri">金曜</option><option value="wed">水曜</option><option value="mon">月曜</option></select></div></div>
-  <label>その曜日のボーダー</label><div class="row"><select id="histCheckpointRank"></select><input id="histCheckpointPt" type="number" min="0" step="1" placeholder="pt"></div>
+  <div class="row"><div><label>順位</label><select id="histTarget"><option value="500">500位</option><option value="5000">5000位</option></select></div><div><label>曜日</label><select id="histDay"><option value="fri">金曜20時</option><option value="wed">水曜20時</option><option value="mon">月曜20時</option></select></div></div>
+  <label>その時点のボーダー</label><div class="row"><select id="histCheckpointRank"></select><input id="histCheckpointPt" type="number" min="0" step="1" placeholder="pt"></div>
   <label>最終ボーダー</label><div class="row"><select id="histFinalRank"></select><input id="histFinalPt" type="number" min="0" step="1" placeholder="pt"></div>
   <label><input id="histExact" type="checkbox" checked>1pt単位の正確な値</label>
   <button class="secondary" style="width:100%;margin-top:12px" onclick="addRateHistory()">過去データを追加</button>
@@ -166,7 +201,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
-<div class="version">v4.0</div>
+<div class="version">v5.0</div>
 </div>
 
 <script>
@@ -187,6 +222,15 @@ let purchases=JSON.parse(localStorage.getItem("cg_purchases")||"[]");
 let settings=JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"cur":1,"bm":5000}');
 let rateCustom=JSON.parse(localStorage.getItem("cg_rate_history_custom")||"[]");
 let ratePrefs=JSON.parse(localStorage.getItem("cg_rate_prefs")||'{}');
+let rateObservations=JSON.parse(localStorage.getItem("cg_rate_observations")||"[]");
+let rateSeason=JSON.parse(localStorage.getItem("cg_rate_season")||"null");
+if(!rateSeason){
+ const legacySelf=ratePrefs.selfRank?(1500+(Number(ratePrefs.selfRank)*500)+Number(ratePrefs.selfPt||0)):"";
+ rateSeason={name:"",endAt:"",selfBp:legacySelf,margin:Number(ratePrefs.margin??50)};
+}
+let rateEditorPoints=[];
+let rateEditorFiles=[];
+let editingRateObservationId=null;
 const RATE_SEED=[
  {season:"2026年8月 イグニス",target:500,mon:"S5/030",wed:"S5/275",fri:"S6/035",final:"S6/460"},{season:"2026年8月 イグニス",target:5000,mon:"S4/010",wed:"S4/160",fri:"S4/315",final:"S5/120"},
  {season:"2026年7月 きらら",target:500,mon:"S5/020",wed:"S5/220",fri:"S5/460",final:"S6/405"},{season:"2026年7月 きらら",target:5000,mon:"S4/005",wed:"S4/135",fri:"S4/270",final:"S5/095"},
@@ -222,11 +266,13 @@ const pct=(a,b)=>b?((a/b)*100).toFixed(2):"0.00";
 $("rateUR").value=settings.ur;$("rateSR").value=settings.sr;$("rateCUR").value=settings.cur;$("bmPer60").value=settings.bm;
 const today=new Date().toLocaleDateString("sv-SE");$("date").value=today;$("purchaseDate").value=today;
 const rankOptions=Array.from({length:9},(_,i)=>`<option value="${i+1}">S${i+1}</option>`).join("");
-["rateBorderRank","histCheckpointRank","histFinalRank"].forEach(id=>$(id).innerHTML=rankOptions);
-$("rateSelfRank").innerHTML='<option value="">入力しない</option>'+rankOptions;
-$("rateBorderRank").value=ratePrefs.borderRank||6;$("rateBorderPt").value=ratePrefs.borderPt??25;
-$("rateTarget").value=ratePrefs.target||500;$("rateDay").value=ratePrefs.day||"fri";$("rateMargin").value=ratePrefs.margin??50;
-if(ratePrefs.selfRank){$("rateSelfRank").value=ratePrefs.selfRank;$("rateSelfPt").value=ratePrefs.selfPt??0}
+["histCheckpointRank","histFinalRank"].forEach(id=>$(id).innerHTML=rankOptions);
+$("rateSeasonName").value=rateSeason.name||"";
+$("rateSeasonEnd").value=rateSeason.endAt||"";
+$("rateMargin").value=rateSeason.margin??50;
+$("rateSelfBp").value=rateSeason.selfBp||"";
+setRateObservedNow();
+renderRatePointEditor();
 
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
@@ -312,7 +358,7 @@ function render(){
    <div class="note" style="margin-top:8px">${remain===0?"800連到達済み":`あと ${remain}連 / 60連単位なら ${batches}回（${batches*60}連）/ 約 ${needBM.toLocaleString()}BM`}</div></div>`
  }).join("");
 
- renderMoney(); setupReportSelectors(); renderReport(); renderRateHistory();
+ renderMoney(); setupReportSelectors(); renderReport(); renderRateHistory(); renderRateDashboard();
 }
 
 function buildTrendSvg(list){
@@ -385,59 +431,211 @@ function renderReport(){
 }
 
 
+
 function parseRateText(v){
  const m=String(v||"").match(/S(\d+)\/(\d+)/i);if(!m)return null;return rankPtToBp(+m[1],+m[2]);
 }
 function rankPtToBp(rank,pt){return 1500+(Number(rank)*500)+Number(pt||0)}
 function bpToRate(bp){
- bp=Math.round(bp);if(bp>=6000)return `S9/${String(bp-6000).padStart(3,"0")}`;
+ bp=Math.round(Number(bp));if(!Number.isFinite(bp))return "-";
  let rank=Math.floor((bp-1500)/500);rank=Math.max(1,Math.min(9,rank));let pt=bp-(1500+rank*500);
- return `S${rank}/${String(Math.max(0,pt)).padStart(3,"0")}`;
+ if(bp>=6000){rank=9;pt=bp-6000}
+ return `S${rank}/${String(Math.max(0,Math.round(pt))).padStart(3,"0")}`;
 }
-function quantile(a,q){const x=[...a].sort((m,n)=>m-n);if(!x.length)return 0;const pos=(x.length-1)*q,lo=Math.floor(pos),hi=Math.ceil(pos);return x[lo]+(x[hi]-x[lo])*(pos-lo)}
+function quantile(a,q){const x=[...a].filter(Number.isFinite).sort((m,n)=>m-n);if(!x.length)return 0;const pos=(x.length-1)*q,lo=Math.floor(pos),hi=Math.ceil(pos);return x[lo]+(x[hi]-x[lo])*(pos-lo)}
+function localDateTimeValue(d=new Date()){
+ const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function jpDateTime(v){
+ const d=new Date(v);if(Number.isNaN(d.getTime()))return "-";return new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"2-digit",day:"2-digit",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);
+}
+function dayName(v){const d=new Date(v);return Number.isNaN(d.getTime())?"-":new Intl.DateTimeFormat("ja-JP",{weekday:"long"}).format(d)}
+function setRateObservedNow(){$("rateObservedAt").value=localDateTimeValue(new Date());updateObservedAtLabel()}
+function updateObservedAtLabel(){$("rateObservedDay").textContent=dayName($("rateObservedAt").value)}
+function saveRateSeasonSettings(){
+ rateSeason={name:$("rateSeasonName").value.trim(),endAt:$("rateSeasonEnd").value,selfBp:$("rateSelfBp").value===""?"":Number($("rateSelfBp").value),margin:Math.max(0,Number($("rateMargin").value)||0)};
+ localStorage.setItem("cg_rate_season",JSON.stringify(rateSeason));renderRateDashboard();alert("シーズン設定を保存しました");
+}
 function mergedRateHistory(target,day){
  const map=new Map();
  RATE_SEED.filter(r=>r.target===target&&r[day]&&r.final).forEach(r=>map.set(`${r.season}|${r.target}|${day}`,{season:r.season,target:r.target,day,checkpoint:r[day],final:r.final,exact:false,source:"cmns 5pt刻み"}));
  rateCustom.filter(r=>+r.target===target&&r.day===day).forEach(r=>map.set(`${r.season}|${r.target}|${day}`,r));
  return [...map.values()].map(r=>({...r,checkpointBp:parseRateText(r.checkpoint),finalBp:parseRateText(r.final)})).filter(r=>Number.isFinite(r.checkpointBp)&&Number.isFinite(r.finalBp));
 }
-function predictRate(){
- const target=+$('rateTarget').value,day=$('rateDay').value,rank=+$('rateBorderRank').value,pt=+$('rateBorderPt').value||0,margin=Math.max(0,+$('rateMargin').value||0);
- const current=rankPtToBp(rank,pt),all=mergedRateHistory(target,day);
- if(!all.length){$('rateResult').innerHTML='<div class="note">比較できる過去データがありません。</div>';return}
- const rows=all.map(r=>({...r,delta:r.finalBp-r.checkpointBp,distance:Math.abs(r.checkpointBp-current)})).sort((a,b)=>a.distance-b.distance);
- const near=rows.slice(0,Math.min(10,rows.length));
- let sumW=0,sumD=0;near.forEach((r,i)=>{const w=1/(r.distance+60)*(1+Math.max(0,10-i)*0.025);sumW+=w;sumD+=r.delta*w});
- const avgDelta=sumD/sumW,deltas=near.map(r=>r.delta),pred=Math.round(current+avgDelta),low=Math.round(current+quantile(deltas,.25)),high=Math.round(current+quantile(deltas,.75));
- const spread=Math.round(quantile(deltas,.75)-quantile(deltas,.25)),safe=pred+margin;
- const selfRank=$('rateSelfRank').value,selfBp=selfRank?rankPtToBp(+selfRank,+$('rateSelfPt').value||0):null,need=selfBp==null?null:safe-selfBp;
- ratePrefs={target,day,borderRank:rank,borderPt:pt,margin,selfRank:selfRank||"",selfPt:+$('rateSelfPt').value||0};localStorage.setItem('cg_rate_prefs',JSON.stringify(ratePrefs));
- $('rateResult').innerHTML=`<div class="grid">
-  <div class="stat"><div class="muted">現在ボーダー</div><div class="big">${bpToRate(current)}</div><div class="muted">${current.toLocaleString()} BP</div></div>
-  <div class="stat"><div class="muted">最終予想・本命</div><div class="big gold">${bpToRate(pred)}</div><div class="muted">${pred.toLocaleString()} BP</div></div>
-  <div class="stat"><div class="muted">予想レンジ</div><div style="font-weight:800;margin-top:5px">${bpToRate(low)} ～ ${bpToRate(high)}</div><div class="muted">近い${near.length}シーズンの中央50%</div></div>
-  <div class="stat"><div class="muted">安全目標 +${margin}</div><div class="big blue">${bpToRate(safe)}</div><div class="muted">${safe.toLocaleString()} BP</div></div>
- </div>
- ${selfBp==null?'':`<div class="detailCard"><div class="entry-title"><span>自分 ${bpToRate(selfBp)}</span><span class="${need<=0?'good':'bad'}">${need<=0?'安全目標 +'+Math.abs(need)+'pt':'安全目標まで '+need+'pt'}</span></div></div>`}
- <p class="note">比較データ ${all.length}件 / 使用 ${near.length}件 / 伸び幅の中央50%の幅 約${spread}pt。予想値は順位を保証するものではありません。</p>`;
- $('rateSimilar').innerHTML=near.slice(0,5).map(r=>`<div class="entry"><div class="entry-title"><span>${esc(r.season)}</span><span>+${r.delta}pt</span></div><div class="note">${r.checkpoint} → ${r.final}　現在値との差 ${r.distance}pt　${r.exact?'正確値':'5pt刻み'}</div></div>`).join('');
+function normalizePoints(points){
+ const m=new Map();(points||[]).forEach(p=>{const rank=Math.round(Number(p.rank)),bp=Math.round(Number(p.bp));if(rank>0&&bp>0)m.set(rank,{rank,bp,source:p.source||""})});return [...m.values()].sort((a,b)=>a.rank-b.rank);
+}
+function inferBorder(points,target){
+ const p=normalizePoints(points);if(!p.length)return null;
+ const exact=p.find(x=>x.rank===target);if(exact)return {target,bp:exact.bp,low:exact.bp,high:exact.bp,confidence:"高",method:"実測",above:exact,below:exact,gap:0};
+ const above=[...p].filter(x=>x.rank<target).sort((a,b)=>b.rank-a.rank)[0];
+ const below=p.filter(x=>x.rank>target).sort((a,b)=>a.rank-b.rank)[0];
+ if(above&&below){
+  const t=(target-above.rank)/(below.rank-above.rank),bp=Math.round(above.bp+(below.bp-above.bp)*t),gap=below.rank-above.rank,maxDist=Math.max(target-above.rank,below.rank-target);
+  const confidence=(gap<=220&&maxDist<=160)?"高":gap<=700?"中":"低";
+  return {target,bp,low:Math.min(above.bp,below.bp),high:Math.max(above.bp,below.bp),confidence,method:"上下から補間",above,below,gap};
+ }
+ const near=[...p].sort((a,b)=>Math.abs(a.rank-target)-Math.abs(b.rank-target)).slice(0,3);
+ if(near.length>=2&&near[0].rank!==near[1].rank){
+  const a=near[0],b=near[1],slope=(b.bp-a.bp)/(b.rank-a.rank),bp=Math.round(a.bp+slope*(target-a.rank)),unc=Math.max(20,Math.round(Math.abs(target-a.rank)*Math.abs(slope)*0.35));
+  return {target,bp,low:bp-unc,high:bp+unc,confidence:"低",method:"片側から外挿",above:above||null,below:below||null,gap:null};
+ }
+ return {target,bp:near[0].bp,low:near[0].bp-50,high:near[0].bp+50,confidence:"低",method:"最寄り1件",above:above||null,below:below||null,gap:null};
+}
+function confClass(c){return c==="高"?"conf-high":c==="中"?"conf-mid":"conf-low"}
+function inferenceDetail(x){
+ if(!x)return "推定不可";
+ if(x.method==="実測")return `${x.target}位を実測`;
+ if(x.above&&x.below)return `${x.above.rank}位 ${x.above.bp}pt ～ ${x.below.rank}位 ${x.below.bp}pt`;
+ return `${x.method}`;
+}
+function renderRatePointEditor(){
+ const box=$("ratePointEditor");if(!box)return;
+ if(!rateEditorPoints.length){box.innerHTML='<div class="note" style="margin-top:8px">まだ順位データがありません。スクショ読取か手動追加を使ってください。</div>';renderRateEstimatePreview();return}
+ rateEditorPoints=normalizePoints(rateEditorPoints);
+ box.innerHTML=rateEditorPoints.map((p,i)=>`<div class="rate-point-row"><div><label>順位</label><input type="number" min="1" value="${p.rank}" oninput="updateRatePoint(${i},'rank',this.value)"></div><div><label>pt</label><input type="number" min="1" value="${p.bp}" oninput="updateRatePoint(${i},'bp',this.value)"></div><button class="danger smallbtn" onclick="removeRatePoint(${i})">削除</button></div>`).join("");
+ renderRateEstimatePreview();
+}
+function updateRatePoint(i,key,v){if(!rateEditorPoints[i])return;rateEditorPoints[i][key]=Number(v);renderRateEstimatePreview()}
+function removeRatePoint(i){rateEditorPoints.splice(i,1);renderRatePointEditor()}
+function addRatePoint(){rateEditorPoints.push({rank:0,bp:0,source:"手動"});
+ const box=$("ratePointEditor");box.innerHTML+=`<div class="rate-point-row"><div><label>順位</label><input type="number" min="1" value="" oninput="updateRatePoint(${rateEditorPoints.length-1},'rank',this.value)"></div><div><label>pt</label><input type="number" min="1" value="" oninput="updateRatePoint(${rateEditorPoints.length-1},'bp',this.value)"></div><button class="danger smallbtn" onclick="removeRatePoint(${rateEditorPoints.length-1})">削除</button></div>`;renderRateEstimatePreview()}
+function renderRateEstimatePreview(){
+ const el=$("rateEstimatePreview");if(!el)return;const pts=normalizePoints(rateEditorPoints),a=inferBorder(pts,500),b=inferBorder(pts,5000);
+ if(!pts.length){el.innerHTML="";return}
+ el.innerHTML=`<div class="rate-preview">${[a,b].map(x=>x?`<div class="rate-estimate"><div class="muted">${x.target}位 推定</div><div class="big">${x.bp.toLocaleString()}pt</div><div>${bpToRate(x.bp)} / <span class="${confClass(x.confidence)}">信頼度 ${x.confidence}</span></div><div class="note">範囲 ${x.low.toLocaleString()}～${x.high.toLocaleString()}pt<br>${inferenceDetail(x)}</div></div>`:`<div class="rate-estimate"><div class="muted">推定不可</div></div>`).join("")}</div>`;
+}
+async function loadScriptOnce(url,globalName){
+ if(globalName&&window[globalName])return window[globalName];
+ return new Promise((resolve,reject)=>{const old=[...document.scripts].find(x=>x.src===url);if(old){old.addEventListener('load',()=>resolve(window[globalName]));old.addEventListener('error',reject);return}const s=document.createElement('script');s.src=url;s.async=true;s.onload=()=>resolve(globalName?window[globalName]:true);s.onerror=()=>reject(new Error('外部ライブラリを読み込めませんでした'));document.head.appendChild(s)});
+}
+async function getScreenshotDate(file){
+ try{
+  await loadScriptOnce('https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js','exifr');
+  if(window.exifr){const x=await window.exifr.parse(file,['DateTimeOriginal','CreateDate','DateCreated']);const d=x&&(x.DateTimeOriginal||x.CreateDate||x.DateCreated);if(d instanceof Date&&!Number.isNaN(d.getTime()))return {date:d,source:'画像の撮影日時'}}
+ }catch(e){}
+ if(file.lastModified){const d=new Date(file.lastModified);if(d.getFullYear()>2000)return {date:d,source:'ファイル日時'}}
+ return {date:new Date(),source:'現在日時'};
+}
+async function handleRateScreenshotFiles(ev){
+ rateEditorFiles=[...(ev.target.files||[])];renderRateFileList();if(!rateEditorFiles.length)return;
+ const dates=[];for(const f of rateEditorFiles){const d=await getScreenshotDate(f);dates.push({...d,name:f.name})}
+ dates.sort((a,b)=>a.date-b.date);if(!editingRateObservationId&&dates[0]){$("rateObservedAt").value=localDateTimeValue(dates[0].date);updateObservedAtLabel()}
+ const spread=dates.length>1?(dates.at(-1).date-dates[0].date)/60000:0;
+ $("rateOcrStatus").textContent=`日時候補：${jpDateTime(dates[0].date)}（${dates[0].source}）${spread>10?` / スクショ間が約${Math.round(spread)}分あります。確認日時を確認してください。`:''}`;
+}
+function renderRateFileList(){
+ const el=$("rateFileList");if(!rateEditorFiles.length){el.innerHTML="スクショ未選択";return}
+ el.innerHTML=rateEditorFiles.map(f=>`<div class="rate-file">${esc(f.name)} <span class="muted">${Math.round(f.size/1024).toLocaleString()}KB</span></div>`).join("");
+}
+function fileToImage(file){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=e=>{URL.revokeObjectURL(url);reject(e)};img.src=url})}
+function cropForOCR(img,side){
+ const y0=Math.round(img.naturalHeight*0.15),h=Math.round(img.naturalHeight*0.68);let x0,w,invert=false;
+ if(side==='rank'){x0=Math.round(img.naturalWidth*0.055);w=Math.round(img.naturalWidth*0.235);invert=true}else{x0=Math.round(img.naturalWidth*0.72);w=Math.round(img.naturalWidth*0.255)}
+ const scale=Math.min(1.5,1500/w),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,x0,y0,w,h,0,0,c.width,c.height);
+ const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){let g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);if(invert)g=255-g;g=g>145?255:0;d[i]=d[i+1]=d[i+2]=g}ctx.putImageData(im,0,0);return c;
+}
+function wordsFromTesseract(data){
+ if(Array.isArray(data.words)&&data.words.length)return data.words.map(w=>({text:w.text,left:w.bbox?.x0||0,top:w.bbox?.y0||0,width:(w.bbox?.x1||0)-(w.bbox?.x0||0),height:(w.bbox?.y1||0)-(w.bbox?.y0||0)}));
+ if(data.tsv){return data.tsv.split(/\r?\n/).slice(1).map(line=>line.split('\t')).filter(a=>a.length>=12&&a[0]==='5').map(a=>({left:+a[6],top:+a[7],width:+a[8],height:+a[9],text:a.slice(11).join('\t')}))}
+ return [];
+}
+function numericOCRItems(data,min,max){
+ const words=wordsFromTesseract(data),out=[];for(const w of words){const m=String(w.text||'').replace(/[OoIl]/g,'').match(/\d{1,6}/);if(!m)continue;const n=Number(m[0]);if(n>=min&&n<=max)out.push({n,y:w.top+w.height/2,synthetic:false})}
+ if(out.length)return out.sort((a,b)=>a.y-b.y);
+ const nums=(String(data.text||'').match(/\d{1,6}/g)||[]).map(Number).filter(n=>n>=min&&n<=max);return nums.map((n,i)=>({n,y:i*1000,synthetic:true}));
+}
+function medianGap(items){const gaps=[];for(let i=1;i<items.length;i++){const g=items[i].y-items[i-1].y;if(g>0)gaps.push(g)}return gaps.length?quantile(gaps,.5):180}
+function pairOCR(rankItems,ptItems,source){
+ const pairs=[];if(!rankItems.length||!ptItems.length)return pairs;
+ const positional=!rankItems.every(x=>x.synthetic)&&!ptItems.every(x=>x.synthetic);
+ if(!positional){const n=Math.min(rankItems.length,ptItems.length);for(let i=0;i<n;i++)pairs.push({rank:rankItems[i].n,bp:ptItems[i].n,source});return pairs}
+ const threshold=Math.max(55,Math.min(180,Math.min(medianGap(rankItems),medianGap(ptItems))*.46)),used=new Set();
+ for(const r of rankItems){let best=-1,dist=Infinity;ptItems.forEach((p,i)=>{if(used.has(i))return;const d=Math.abs(p.y-r.y);if(d<dist){dist=d;best=i}});if(best>=0&&dist<=threshold){used.add(best);pairs.push({rank:r.n,bp:ptItems[best].n,source})}}
+ return pairs;
+}
+async function runRateOCR(){
+ if(!rateEditorFiles.length){alert('先にスクショを選択してください');return}
+ const status=$("rateOcrStatus");status.textContent='OCRを準備しています…';
+ try{
+  await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js','Tesseract');
+  const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status){const pct=Number.isFinite(m.progress)?` ${Math.round(m.progress*100)}%`:'';status.textContent=`${m.status}${pct}`}}});
+  await worker.setParameters({tessedit_char_whitelist:'0123456789ptPT',tessedit_pageseg_mode:'6'});
+  const found=[];for(let i=0;i<rateEditorFiles.length;i++){
+   status.textContent=`${i+1}/${rateEditorFiles.length}枚目を解析中…`;const img=await fileToImage(rateEditorFiles[i]),left=cropForOCR(img,'rank'),right=cropForOCR(img,'pt');
+   const a=await worker.recognize(left,{}, {tsv:true}),b=await worker.recognize(right,{}, {tsv:true});
+   const ranks=numericOCRItems(a.data,1,99999),pts=numericOCRItems(b.data,1500,99999);found.push(...pairOCR(ranks,pts,rateEditorFiles[i].name));
+  }
+  await worker.terminate();
+  if(found.length){rateEditorPoints=normalizePoints([...rateEditorPoints,...found]);renderRatePointEditor();status.textContent=`${found.length}件を読み取りました。数字を確認してから保存してください。`}
+  else status.textContent='数字を読み取れませんでした。手動追加で入力できます。';
+ }catch(e){console.error(e);status.textContent='OCRに失敗しました。通信状態を確認するか、手動追加を使ってください。';}
+}
+function observationFingerprint(season,at,points){const minute=String(at||'').slice(0,16),p=normalizePoints(points).map(x=>`${x.rank}:${x.bp}`).join('|');return `${season}|${minute}|${p}`}
+function saveRateObservation(){
+ const season=$("rateSeasonName").value.trim(),observedAt=$("rateObservedAt").value,memo=$("rateObservationMemo").value.trim(),points=normalizePoints(rateEditorPoints);
+ if(!season){alert('シーズン名を入力してください');return}if(!observedAt){alert('確認日時を入力してください');return}if(points.length<1){alert('順位・ptを1件以上入力してください');return}
+ const fp=observationFingerprint(season,observedAt,points),dup=rateObservations.find(o=>o.id!==editingRateObservationId&&observationFingerprint(o.season,o.observedAt,o.points)===fp);if(dup){alert('同じ日時・順位データがすでに登録されています');return}
+ const existingObs=editingRateObservationId?rateObservations.find(o=>o.id===editingRateObservationId):null;
+ const fileMeta=rateEditorFiles.length?rateEditorFiles.map(f=>({name:f.name,size:f.size,lastModified:f.lastModified})):(existingObs?.files||[]);
+ if(!editingRateObservationId&&fileMeta.length){const same=rateObservations.find(o=>(o.files||[]).some(a=>fileMeta.some(b=>a.name===b.name&&a.size===b.size&&a.lastModified===b.lastModified)));if(same){alert('同じスクショがすでに登録されています');return}}
+ const wasEditing=Boolean(editingRateObservationId),item={id:editingRateObservationId||Date.now(),season,observedAt,points,memo,files:fileMeta,updatedAt:new Date().toISOString()};
+ if(wasEditing)rateObservations=rateObservations.map(o=>o.id===editingRateObservationId?item:o);else rateObservations.push(item);
+ localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));rateSeason.name=season;localStorage.setItem('cg_rate_season',JSON.stringify(rateSeason));resetRateObservationEditor();renderRateDashboard();alert(wasEditing?'更新しました':'保存しました');
+}
+function resetRateObservationEditor(){editingRateObservationId=null;rateEditorPoints=[];rateEditorFiles=[];$("rateScreenshots").value='';$("rateObservationMemo").value='';$("rateEditorTitle").textContent='現在ボーダーを追加';$("rateObservationSaveBtn").textContent='この観測を保存';$("rateObservationCancelBtn").classList.add('hidden');setRateObservedNow();renderRateFileList();renderRatePointEditor();$("rateOcrStatus").textContent='OCRは保存前に必ず結果を確認・修正できます。初回のOCRにはネット接続が必要です。'}
+function editRateObservation(id){const o=rateObservations.find(x=>x.id===id);if(!o)return;editingRateObservationId=id;rateEditorPoints=(o.points||[]).map(x=>({...x}));rateEditorFiles=[];$("rateScreenshots").value='';$("rateSeasonName").value=o.season;$("rateObservedAt").value=o.observedAt;$("rateObservationMemo").value=o.memo||'';$("rateEditorTitle").textContent='観測データを編集';$("rateObservationSaveBtn").textContent='変更を保存';$("rateObservationCancelBtn").classList.remove('hidden');updateObservedAtLabel();renderRateFileList();renderRatePointEditor();document.getElementById('rate').scrollIntoView({behavior:'smooth',block:'start'})}
+function cancelRateObservationEdit(){resetRateObservationEditor()}
+function deleteRateObservation(id){if(!confirm('この観測データを削除しますか？'))return;rateObservations=rateObservations.filter(o=>o.id!==id);localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));if(editingRateObservationId===id)resetRateObservationEditor();renderRateDashboard()}
+function rateSeries(target,season){return rateObservations.filter(o=>o.season===season).map(o=>{const est=inferBorder(o.points,target);return est?{time:new Date(o.observedAt).getTime(),at:o.observedAt,bp:est.bp,confidence:est.confidence,obs:o,est}:null}).filter(Boolean).sort((a,b)=>a.time-b.time)}
+function linearSlopePerHour(series){const a=series.slice(-5);if(a.length<2)return null;const t0=a[0].time,x=a.map(p=>(p.time-t0)/3600000),y=a.map(p=>p.bp),mx=x.reduce((s,v)=>s+v,0)/x.length,my=y.reduce((s,v)=>s+v,0)/y.length;let num=0,den=0;for(let i=0;i<x.length;i++){num+=(x[i]-mx)*(y[i]-my);den+=(x[i]-mx)**2}return den?num/den:null}
+function previousDelta(series){if(series.length<2)return null;const a=series.at(-2),b=series.at(-1),h=(b.time-a.time)/3600000;if(h<=0)return null;return {delta:b.bp-a.bp,hours:h,perHour:(b.bp-a.bp)/h}}
+function checkpointForDate(d){
+ const targetDays=[1,3,5];let best=null,bestKey='fri';for(let back=0;back<8;back++){const c=new Date(d);c.setDate(c.getDate()-back);c.setHours(20,0,0,0);if(targetDays.includes(c.getDay())&&c<=d){if(!best||c>best){best=c;bestKey=c.getDay()===1?'mon':c.getDay()===3?'wed':'fri'}}}return {date:best,key:bestKey};
+}
+function historicalForecast(currentBp,target,currentAt,endAt){
+ const now=new Date(currentAt),end=endAt?new Date(endAt):null,cp=checkpointForDate(now),all=mergedRateHistory(target,cp.key);if(!all.length)return null;
+ let scale=1;if(end&&!Number.isNaN(end.getTime())&&cp.date){const total=(end-cp.date)/3600000,rem=(end-now)/3600000;if(total>0)scale=Math.max(0,Math.min(1.15,rem/total))}
+ const rows=all.map(r=>({...r,delta:(r.finalBp-r.checkpointBp)*scale,distance:Math.abs(r.checkpointBp-currentBp)})).sort((a,b)=>a.distance-b.distance),near=rows.slice(0,Math.min(10,rows.length));let sw=0,sd=0;near.forEach((r,i)=>{const w=1/(r.distance+70)*(1+(near.length-i)*.02);sw+=w;sd+=r.delta*w});const deltas=near.map(r=>r.delta);return {pred:Math.round(currentBp+sd/sw),low:Math.round(currentBp+quantile(deltas,.25)),high:Math.round(currentBp+quantile(deltas,.75)),day:cp.key,scale,used:near.length};
+}
+function formatHours(h){if(!Number.isFinite(h))return '-';if(h<0)return '終了済み';const d=Math.floor(h/24),r=Math.round(h-d*24);return d?`${d}日${r}時間`:`${r}時間`}
+function targetForecast(target,season){
+ const series=rateSeries(target,season);if(!series.length)return null;const latest=series.at(-1),end=rateSeason.endAt?new Date(rateSeason.endAt):null,remaining=end&&!Number.isNaN(end.getTime())?(end-latest.time)/3600000:null,slope=linearSlopePerHour(series),hist=remaining==null?null:historicalForecast(latest.bp,target,latest.at,rateSeason.endAt);
+ let pred=null,low=null,high=null,trendPred=null;if(remaining!=null&&remaining>=0&&slope!=null){trendPred=Math.round(latest.bp+slope*remaining)}
+ if(hist&&trendPred!=null){pred=Math.round(trendPred*.6+hist.pred*.4);low=Math.round(Math.min(hist.low,pred-Math.max(15,Math.abs(trendPred-hist.pred)*.35)));high=Math.round(Math.max(hist.high,pred+Math.max(15,Math.abs(trendPred-hist.pred)*.35)))}else if(hist){pred=hist.pred;low=hist.low;high=hist.high}else if(trendPred!=null){pred=trendPred;low=pred-40;high=pred+40}
+ return {target,series,latest,remaining,slope,hist,trendPred,pred,low,high,delta:previousDelta(series)};
+}
+function buildRateTrendSvg(season){
+ const a=rateSeries(500,season),b=rateSeries(5000,season),all=[...a,...b];if(!all.length)return '<div class="note">観測データなし</div>';const W=760,H=280,pad=42,minT=Math.min(...all.map(x=>x.time)),maxT=Math.max(...all.map(x=>x.time)),minY=Math.min(...all.map(x=>x.bp))-20,maxY=Math.max(...all.map(x=>x.bp))+20,sx=t=>pad+(t-minT)/Math.max(1,maxT-minT)*(W-2*pad),sy=y=>H-pad-(y-minY)/Math.max(1,maxY-minY)*(H-2*pad),poly=x=>x.map(p=>`${sx(p.time)},${sy(p.bp)}`).join(' ');
+ return `<svg viewBox="0 0 ${W} ${H}" aria-label="ボーダー推移"><line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#566070"/><line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#566070"/>${a.length?`<polyline fill="none" stroke="#e7bd52" stroke-width="4" points="${poly(a)}"/>${a.map(p=>`<circle cx="${sx(p.time)}" cy="${sy(p.bp)}" r="4" fill="#e7bd52"/>`).join('')}`:''}${b.length?`<polyline fill="none" stroke="#8fc8ff" stroke-width="4" points="${poly(b)}"/>${b.map(p=>`<circle cx="${sx(p.time)}" cy="${sy(p.bp)}" r="4" fill="#8fc8ff"/>`).join('')}`:''}<text x="${pad}" y="22" fill="#9fa7b7" font-size="12">${Math.round(maxY)}pt</text><text x="${pad}" y="${H-10}" fill="#9fa7b7" font-size="12">${jpDateTime(new Date(minT))}</text><text x="${W-pad}" y="${H-10}" fill="#9fa7b7" font-size="12" text-anchor="end">${jpDateTime(new Date(maxT))}</text></svg>`;
+}
+function renderRateDashboard(){
+ if(!$("rateDashboard"))return;const season=$("rateSeasonName").value.trim()||rateSeason.name||'',margin=Math.max(0,Number($("rateMargin").value)||rateSeason.margin||0),f500=targetForecast(500,season),f5000=targetForecast(5000,season),end=rateSeason.endAt||$("rateSeasonEnd").value,selfBp=Number($("rateSelfBp").value||rateSeason.selfBp||0);
+ if(!season){$("rateDashboard").innerHTML='<div class="note">シーズン名を設定してください。</div>';$("rateTrendChart").innerHTML='<div class="note">観測データなし</div>';renderRateObservationHistory();return}
+ const card=(f,target)=>{if(!f)return `<div class="rate-estimate"><div class="muted">${target}位</div><div>観測なし</div></div>`;const d=f.delta,safe=f.pred==null?null:f.pred+margin,need=selfBp&&safe!=null?safe-selfBp:null;return `<div class="rate-estimate"><div class="muted">${f.target}位 現在推定</div><div class="big">${f.latest.bp.toLocaleString()}pt</div><div>${bpToRate(f.latest.bp)} / <span class="${confClass(f.latest.confidence)}">信頼度 ${f.latest.confidence}</span></div>${d?`<div class="note">前回から ${d.delta>=0?'+':''}${d.delta}pt / ${d.hours.toFixed(1)}時間（${d.perHour>=0?'+':''}${d.perHour.toFixed(1)}pt/時）</div>`:''}${f.pred!=null?`<hr style="border:0;border-top:1px solid var(--line);margin:10px 0"><div class="muted">最終予想</div><div class="big gold">${f.pred.toLocaleString()}pt</div><div class="note">予想範囲 ${f.low.toLocaleString()}～${f.high.toLocaleString()}pt<br>残り ${formatHours(f.remaining)}${f.slope!=null?` / 直近傾向 ${f.slope>=0?'+':''}${f.slope.toFixed(1)}pt/時`:''}</div><div style="margin-top:8px"><span class="pill">安全目標 ${safe.toLocaleString()}pt</span>${need!=null?` <span class="pill ${need<=0?'good':'bad'}">${need<=0?`+${Math.abs(need)}pt余裕`:`あと${need}pt`}</span>`:''}</div>`:`<div class="note" style="margin-top:8px">終了日時を設定すると最終予想を表示します。</div>`}</div>`};
+ $("rateDashboard").innerHTML=`<div class="rate-preview">${card(f500,500)}${card(f5000,5000)}</div>${end?`<p class="note">シーズン終了：${jpDateTime(end)}。最終予想は直近の実測推移と、過去の月・水・金20時→最終の伸びを残り時間に合わせて組み合わせた参考値です。</p>`:''}`;
+ $("rateTrendChart").innerHTML=buildRateTrendSvg(season);renderRateObservationHistory();
+}
+function renderRateObservationHistory(){
+ if(!$("rateObservationHistory"))return;const season=$("rateSeasonName").value.trim()||rateSeason.name||'',list=rateObservations.filter(o=>!season||o.season===season).sort((a,b)=>new Date(b.observedAt)-new Date(a.observedAt));
+ $("rateObservationHistory").innerHTML=list.length?list.map(o=>{const a=inferBorder(o.points,500),b=inferBorder(o.points,5000);return `<div class="entry"><div class="entry-title"><span>${jpDateTime(o.observedAt)}</span><span>${o.points.length}件</span></div><div class="note">500位：${a?`${a.bp}pt（${a.confidence}）`:'-'} / 5000位：${b?`${b.bp}pt（${b.confidence}）`:'-'}${o.memo?`<br>${esc(o.memo)}`:''}</div><div class="actions"><button onclick="editRateObservation(${o.id})">編集</button><button class="danger" onclick="deleteRateObservation(${o.id})">削除</button></div></div>`}).join(''):'<div class="note">観測データなし</div>';
 }
 function addRateHistory(){
- const season=$('histSeason').value.trim(),target=+$('histTarget').value,day=$('histDay').value,cr=+$('histCheckpointRank').value,cp=+$('histCheckpointPt').value,fr=+$('histFinalRank').value,fp=+$('histFinalPt').value;
+ const season=$("histSeason").value.trim(),target=+$("histTarget").value,day=$("histDay").value,cr=+$("histCheckpointRank").value,cp=+$("histCheckpointPt").value,fr=+$("histFinalRank").value,fp=+$("histFinalPt").value;
  if(!season||!Number.isFinite(cp)||!Number.isFinite(fp)){alert('シーズン名・途中ボーダー・最終ボーダーを入力してください');return}
- const item={id:Date.now(),season,target,day,checkpoint:`S${cr}/${String(cp).padStart(3,'0')}`,final:`S${fr}/${String(fp).padStart(3,'0')}`,exact:$('histExact').checked,source:'手動追加'};
+ const item={id:Date.now(),season,target,day,checkpoint:`S${cr}/${String(cp).padStart(3,'0')}`,final:`S${fr}/${String(fp).padStart(3,'0')}`,exact:$("histExact").checked,source:'手動追加'};
  rateCustom=rateCustom.filter(r=>!(r.season===season&&+r.target===target&&r.day===day));rateCustom.push(item);localStorage.setItem('cg_rate_history_custom',JSON.stringify(rateCustom));
- $('histSeason').value='';$('histCheckpointPt').value='';$('histFinalPt').value='';renderRateHistory();predictRate();
+ $("histSeason").value='';$("histCheckpointPt").value='';$("histFinalPt").value='';renderRateHistory();renderRateDashboard();
 }
-function deleteRateHistory(id){if(confirm('この追加データを削除しますか？')){rateCustom=rateCustom.filter(r=>r.id!==id);localStorage.setItem('cg_rate_history_custom',JSON.stringify(rateCustom));renderRateHistory()}}
+function deleteRateHistory(id){if(confirm('この追加データを削除しますか？')){rateCustom=rateCustom.filter(r=>r.id!==id);localStorage.setItem('cg_rate_history_custom',JSON.stringify(rateCustom));renderRateHistory();renderRateDashboard()}}
 function renderRateHistory(){
- if(!$('rateHistoryList'))return;
- $('rateHistoryList').innerHTML=rateCustom.length?[...rateCustom].reverse().map(r=>`<div class="entry"><div class="entry-title"><span>${esc(r.season)} ${r.target}位</span><span>${r.checkpoint} → ${r.final}</span></div><div class="note">${r.day==='fri'?'金曜':r.day==='wed'?'水曜':'月曜'} / ${r.exact?'正確値':'概算値'}</div><div class="actions"><button class="danger" onclick="deleteRateHistory(${r.id})">削除</button></div></div>`).join(''):'<div class="note">手動追加データなし</div>';
+ if(!$("rateHistoryList"))return;
+ $("rateHistoryList").innerHTML=rateCustom.length?[...rateCustom].reverse().map(r=>`<div class="entry"><div class="entry-title"><span>${esc(r.season)} ${r.target}位</span><span>${r.checkpoint} → ${r.final}</span></div><div class="note">${r.day==='fri'?'金曜':r.day==='wed'?'水曜':'月曜'}20時 / ${r.exact?'正確値':'概算値'}</div><div class="actions"><button class="danger" onclick="deleteRateHistory(${r.id})">削除</button></div></div>`).join(''):'<div class="note">手動追加データなし</div>';
 }
 
 function saveSettings(){settings={ur:+$("rateUR").value,sr:+$("rateSR").value,cur:+$("rateCUR").value,bm:+$("bmPer60").value};localStorage.setItem("cg_settings",JSON.stringify(settings));render();alert("保存しました")}
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings,rateCustom,ratePrefs},null,2),"application/json")}
+function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings,rateCustom,ratePrefs,rateObservations,rateSeason},null,2),"application/json")}
 function exportCSV(){
  const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,exchange_ur,screenshot_saved,memo\n";
  const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.exchangeUR,e.screenshotSaved,e.memo].map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -445,10 +643,9 @@ function exportCSV(){
 }
 function importJSON(ev){
  const f=ev.target.files[0];if(!f)return;const r=new FileReader();
- r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;rateCustom=x.rateCustom||rateCustom;ratePrefs=x.ratePrefs||ratePrefs;localStorage.setItem("cg_rate_history_custom",JSON.stringify(rateCustom));localStorage.setItem("cg_rate_prefs",JSON.stringify(ratePrefs));localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
+ r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;rateCustom=x.rateCustom||rateCustom;ratePrefs=x.ratePrefs||ratePrefs;rateObservations=x.rateObservations||rateObservations;rateSeason=x.rateSeason||rateSeason;localStorage.setItem("cg_rate_history_custom",JSON.stringify(rateCustom));localStorage.setItem("cg_rate_prefs",JSON.stringify(ratePrefs));localStorage.setItem("cg_rate_observations",JSON.stringify(rateObservations));localStorage.setItem("cg_rate_season",JSON.stringify(rateSeason));localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
 }
 render();
-if(!localStorage.getItem("cg_rate_prefs")){predictRate()}
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body>
