@@ -3,59 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#16181f">
+<meta name="theme-color" content="#13151b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>#コンパス ガチャ記録</title>
 <style>
 :root{
-  --bg:#13151b;--card:#1e222c;--card2:#171a21;--muted:#9fa7b7;--text:#f4f6f8;
-  --gold:#e7bd52;--silver:#d5dae2;--line:#343a48;--good:#8bd49c;--bad:#ff9999;
+ --bg:#13151b;--card:#1e222c;--card2:#171a21;--muted:#9fa7b7;--text:#f4f6f8;
+ --gold:#e7bd52;--silver:#d5dae2;--line:#343a48;--good:#8bd49c;--bad:#ff9999;--blue:#8fc8ff;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
-.wrap{max-width:980px;margin:auto;padding:16px 12px 100px}
-h1{font-size:23px;margin:8px 0 14px}
-h2,h3{margin:0 0 12px}
-.tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;position:sticky;top:0;background:rgba(19,21,27,.94);padding:8px 0;backdrop-filter:blur(10px);z-index:10}
+.wrap{max-width:1000px;margin:auto;padding:14px 12px 100px}
+h1{font-size:23px;margin:8px 0 14px} h2,h3{margin:0 0 12px}
+.tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;position:sticky;top:0;background:rgba(19,21,27,.95);padding:8px 0;backdrop-filter:blur(10px);z-index:10}
 button{border:0;border-radius:11px;padding:11px;background:#303646;color:white;font-weight:700}
-.tabs button{padding:10px 3px;font-size:12px}
-.tabs button.active{background:var(--gold);color:#111}
+.tabs button{padding:10px 2px;font-size:11px}.tabs button.active{background:var(--gold);color:#111}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:11px 0}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
-.stat{background:var(--card2);border-radius:13px;padding:13px}
-.big{font-size:24px;font-weight:800}
-.muted{color:var(--muted);font-size:12px}
-.gold{color:var(--gold)} .silver{color:var(--silver)}
-.good{color:var(--good)} .bad{color:var(--bad)}
+.stat{background:var(--card2);border-radius:13px;padding:13px}.big{font-size:24px;font-weight:800}
+.muted{color:var(--muted);font-size:12px}.gold{color:var(--gold)}.silver{color:var(--silver)}.blue{color:var(--blue)}
+.good{color:var(--good)}.bad{color:var(--bad)}
 label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
 input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#14171e;color:white;font-size:16px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.primary{background:var(--gold);color:#111}
-.danger{background:#5a2a2a}
-.secondary{background:#3a4152}
-.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:7px}
-.quick button{padding:10px 4px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:9px 5px;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left}
-.hidden{display:none}
-.entry{padding:12px 0;border-bottom:1px solid var(--line)}
-.entry:last-child{border-bottom:0}
-.entry-title{display:flex;justify-content:space-between;gap:10px;font-weight:700}
-.actions{display:flex;gap:8px;margin-top:9px}
-.actions button{padding:8px 10px;font-size:12px}
-.note{font-size:12px;color:var(--muted);line-height:1.55}
-.progress{height:12px;background:#101219;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
-.progress>div{height:100%;background:linear-gradient(90deg,#b28a32,#f0cf70)}
-.kpi{display:flex;justify-content:space-between;gap:10px;align-items:end;margin:5px 0 7px}
-.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#2a3040;font-size:11px}
-.chartrow{display:grid;grid-template-columns:80px 1fr 55px;gap:8px;align-items:center;margin:9px 0}
-.bar{height:12px;background:#101219;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
-.bar>div{height:100%;background:#d6b45f}
-.bar.sr>div{background:#d9dde5}
-.bar.cur>div{background:#ad8b3a}
+input[type=checkbox]{width:auto;transform:scale(1.25);margin-right:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.primary{background:var(--gold);color:#111}.danger{background:#5a2a2a}.secondary{background:#3a4152}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:7px}.quick button{padding:10px 4px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 5px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+.hidden{display:none}.entry{padding:12px 0;border-bottom:1px solid var(--line)}.entry:last-child{border-bottom:0}.entry-title{display:flex;justify-content:space-between;gap:10px;font-weight:700}
+.actions{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}.actions button{padding:8px 10px;font-size:12px}.note{font-size:12px;color:var(--muted);line-height:1.55}
+.progress{height:12px;background:#101219;border-radius:999px;overflow:hidden;border:1px solid var(--line)}.progress>div{height:100%;background:linear-gradient(90deg,#b28a32,#f0cf70)}
+.kpi{display:flex;justify-content:space-between;gap:10px;align-items:end;margin:5px 0 7px}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#2a3040;font-size:11px}
 .detailCard{background:#171a21;border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0}
+.reportSel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;border:1px solid var(--line)}
 .version{font-size:11px;color:#6f7787;text-align:center;margin-top:18px}
 @media(min-width:720px){.grid{grid-template-columns:repeat(6,1fr)}}
 </style>
@@ -63,293 +44,292 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
 <h1>#コンパス ガチャ記録</h1>
-
 <div class="tabs">
 <button data-tab="home" class="active">集計</button>
 <button data-tab="add">追加</button>
 <button data-tab="collab">コラボ</button>
 <button data-tab="analysis">分析</button>
-<button data-tab="history">履歴</button>
+<button data-tab="money">課金</button>
+<button data-tab="report">レポート</button>
 <button data-tab="settings">設定</button>
 </div>
 
 <section id="home">
-  <div class="grid" id="stats"></div>
-  <div class="card">
-    <h3>公表確率との比較</h3>
-    <div id="compare"></div>
-  </div>
+ <div class="grid" id="stats"></div>
+ <div class="card"><h3>公表確率との比較</h3><div id="compare"></div></div>
 </section>
 
 <section id="add" class="hidden">
-  <div class="card">
-    <h3>結果を追加</h3>
-    <label>日付</label><input id="date" type="date">
-    <label>コラボ名</label>
-    <input id="collabName" list="collabNames" placeholder="例：陰の実力者になりたくて">
-    <datalist id="collabNames"></datalist>
-
-    <label>連数</label><input id="pulls" type="number" min="1" value="60">
-    <div class="quick">
-      <button type="button" onclick="setPulls(60)">60連</button>
-      <button type="button" onclick="setPulls(120)">120連</button>
-      <button type="button" onclick="setPulls(180)">180連</button>
-      <button type="button" onclick="setPulls(300)">300連</button>
-    </div>
-
-    <div class="row">
-      <div><label>UR 常設</label><input id="urNormal" type="number" min="0" value="0"></div>
-      <div><label>UR コラボ</label><input id="urCollab" type="number" min="0" value="0"></div>
-    </div>
-    <div class="row">
-      <div><label>SR 常設</label><input id="srNormal" type="number" min="0" value="0"></div>
-      <div><label>SR コラボ</label><input id="srCollab" type="number" min="0" value="0"></div>
-    </div>
-
-    <label>かんたん入力（任意）</label>
-    <input id="quickInput" placeholder="例：SR 11:18 / UR 4:0">
-    <button class="secondary" style="width:100%;margin-top:7px" onclick="parseQuick()">反映</button>
-
-    <label>メモ</label><textarea id="memo" rows="2" placeholder="任意"></textarea>
-    <button class="primary" style="width:100%;margin-top:14px" onclick="addEntry()">保存</button>
+ <div class="card">
+  <h3>結果を追加</h3>
+  <label>日付</label><input id="date" type="date">
+  <label>コラボ名</label><input id="collabName" list="collabNames" placeholder="例：陰の実力者になりたくて"><datalist id="collabNames"></datalist>
+  <label>連数</label><input id="pulls" type="number" min="1" value="60">
+  <div class="quick"><button onclick="setPulls(60)">60</button><button onclick="setPulls(120)">120</button><button onclick="setPulls(180)">180</button><button onclick="setPulls(300)">300</button></div>
+  <div class="row">
+   <div><label>UR 常設</label><input id="urNormal" type="number" min="0" value="0"></div>
+   <div><label>UR コラボ</label><input id="urCollab" type="number" min="0" value="0"></div>
   </div>
+  <div class="row">
+   <div><label>SR 常設</label><input id="srNormal" type="number" min="0" value="0"></div>
+   <div><label>SR コラボ</label><input id="srCollab" type="number" min="0" value="0"></div>
+  </div>
+  <label>かんたん入力（任意）</label><input id="quickInput" placeholder="例：SR 11:18 / UR 4:0">
+  <button class="secondary" style="width:100%;margin-top:7px" onclick="parseQuick()">反映</button>
+  <label>交換で入手したコラボUR（排出率には含めない）</label><input id="exchangeUR" type="number" min="0" value="0">
+  <label><input id="screenshotSaved" type="checkbox">スクショ保存済み</label>
+  <label>メモ</label><textarea id="memo" rows="2" placeholder="任意"></textarea>
+  <button class="primary" style="width:100%;margin-top:14px" onclick="addEntry()">保存</button>
+ </div>
 </section>
 
-<section id="collab" class="hidden">
-  <div class="card">
-    <h3>コラボ別詳細</h3>
-    <div id="collabDetails"></div>
-  </div>
-</section>
+<section id="collab" class="hidden"><div class="card"><h3>コラボ別詳細</h3><div id="collabDetails"></div></div></section>
 
 <section id="analysis" class="hidden">
-  <div class="card">
-    <h3>排出率グラフ</h3>
-    <div id="rateCharts"></div>
-  </div>
-  <div class="card">
-    <h3>800連交換まで</h3>
-    <div id="ceilingCards"></div>
-    <p class="note">交換進捗はコラボごとに800連を基準として計算しています。60連単位で引く場合は、必要回数を切り上げて表示します。</p>
-  </div>
+ <div class="card"><h3>統計判定</h3><div id="statJudge"></div><p class="note">「この結果以下/以上になる確率」は、各抽選が独立で公表確率どおりと仮定した二項分布の片側確率です。低いほど珍しい結果ですが、それだけで不具合の証明にはなりません。</p></div>
+ <div class="card"><h3>期待値と実績の推移</h3><div id="trendChart"></div></div>
+ <div class="card"><h3>800連交換まで</h3><div id="ceilingCards"></div></div>
 </section>
 
-<section id="history" class="hidden">
-  <div class="card"><div id="historyList"></div></div>
+<section id="money" class="hidden">
+ <div class="card">
+  <h3>BM購入を記録</h3>
+  <label>日付</label><input id="purchaseDate" type="date">
+  <label>購入パック</label>
+  <select id="packSelect">
+   <option value="160,160">160円 → 160BM</option>
+   <option value="650,710">650円 → 710BM</option>
+   <option value="1600,1900">1,600円 → 1,900BM</option>
+   <option value="3900,4900">3,900円 → 4,900BM</option>
+   <option value="10000,13700">10,000円 → 13,700BM</option>
+  </select>
+  <label>個数</label><input id="packQty" type="number" min="1" value="1">
+  <button class="primary" style="width:100%;margin-top:14px" onclick="addPurchase()">購入記録を追加</button>
+ </div>
+ <div class="card"><h3>課金集計</h3><div id="moneyStats"></div></div>
+ <div class="card"><h3>購入履歴</h3><div id="purchaseHistory"></div></div>
+</section>
+
+<section id="report" class="hidden">
+ <div class="card">
+  <h3>月別・年間レポート</h3>
+  <div class="reportSel">
+   <div><label>年</label><select id="reportYear" onchange="renderReport()"></select></div>
+   <div><label>月</label><select id="reportMonth" onchange="renderReport()"><option value="all">年間</option></select></div>
+  </div>
+  <div id="reportBody"></div>
+ </div>
 </section>
 
 <section id="settings" class="hidden">
-  <div class="card">
-    <h3>設定・バックアップ</h3>
-    <label>UR 公表確率（%）</label><input id="rateUR" type="number" step="0.01" value="2">
-    <label>SR 公表確率（%）</label><input id="rateSR" type="number" step="0.01" value="18">
-    <label>コラボUR 公表確率（%）</label><input id="rateCUR" type="number" step="0.01" value="1">
-    <label>60連あたりBM</label><input id="bmPer60" type="number" value="5000">
-    <button class="primary" style="width:100%;margin-top:14px" onclick="saveSettings()">設定を保存</button>
-    <div class="actions">
-      <button onclick="exportJSON()">JSONバックアップ</button>
-      <button onclick="exportCSV()">CSV出力</button>
-    </div>
-    <label>JSONバックアップから復元</label>
-    <input id="importFile" type="file" accept=".json" onchange="importJSON(event)">
-    <p class="note">アップデートで記録データは消えません。データはこのiPhone内に保存されます。ただしSafariのサイトデータを削除すると巻き添えで消えるので、たまにバックアップ推奨です。人類は「あとでやる」を信用しすぎます。</p>
-  </div>
+ <div class="card">
+  <h3>設定・バックアップ</h3>
+  <label>UR 公表確率（%）</label><input id="rateUR" type="number" step="0.01" value="2">
+  <label>SR 公表確率（%）</label><input id="rateSR" type="number" step="0.01" value="18">
+  <label>コラボUR 公表確率（%）</label><input id="rateCUR" type="number" step="0.01" value="1">
+  <label>60連あたりBM</label><input id="bmPer60" type="number" value="5000">
+  <button class="primary" style="width:100%;margin-top:14px" onclick="saveSettings()">設定を保存</button>
+  <div class="actions"><button onclick="exportJSON()">JSONバックアップ</button><button onclick="exportCSV()">CSV出力</button></div>
+  <label>JSONバックアップから復元</label><input id="importFile" type="file" accept=".json" onchange="importJSON(event)">
+  <p class="note">記録はこのiPhoneのブラウザ内に保存されます。Safariのサイトデータ削除では消える可能性があるため、定期的にJSONバックアップを保存してください。</p>
+ </div>
 </section>
 
-<div class="version">v2.0</div>
+<div class="version">v3.0</div>
 </div>
 
 <script>
-const DEFAULT_ENTRIES = [
- {id:1,date:"2026-07-27",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:3,srCollab:5,memo:""},
- {id:2,date:"2026-07-28",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:2,srCollab:4,memo:""},
- {id:3,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:5,srCollab:7,memo:""},
- {id:4,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:0,urCollab:0,srNormal:9,srCollab:2,memo:""},
- {id:5,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:1,urCollab:1,srNormal:6,srCollab:4,memo:""},
- {id:6,date:"2026-08-28",collab:"陰の実力者になりたくて",pulls:60,urNormal:0,urCollab:2,srNormal:3,srCollab:3,memo:""},
- {id:7,date:"2026-08-28",collab:"陰の実力者になりたくて",pulls:60,urNormal:0,urCollab:0,srNormal:6,srCollab:4,memo:""},
- {id:8,date:"2026-09-01",collab:"陰の実力者になりたくて",pulls:180,urNormal:4,urCollab:0,srNormal:11,srCollab:18,memo:""}
+const DEFAULT_ENTRIES=[
+{id:1,date:"2026-07-27",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:3,srCollab:5,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:2,date:"2026-07-28",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:2,srCollab:4,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:3,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:5,srCollab:7,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:4,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:0,urCollab:0,srNormal:9,srCollab:2,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:5,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:1,urCollab:1,srNormal:6,srCollab:4,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:6,date:"2026-08-28",collab:"陰の実力者になりたくて",pulls:60,urNormal:0,urCollab:2,srNormal:3,srCollab:3,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:7,date:"2026-08-28",collab:"陰の実力者になりたくて",pulls:60,urNormal:0,urCollab:0,srNormal:6,srCollab:4,exchangeUR:0,screenshotSaved:false,memo:""},
+{id:8,date:"2026-09-01",collab:"陰の実力者になりたくて",pulls:180,urNormal:4,urCollab:0,srNormal:11,srCollab:18,exchangeUR:0,screenshotSaved:false,memo:""}
 ];
-
-let entries = JSON.parse(localStorage.getItem("cg_entries")||"null");
+let entries=JSON.parse(localStorage.getItem("cg_entries")||"null");
 if(!entries){entries=DEFAULT_ENTRIES;localStorage.setItem("cg_entries",JSON.stringify(entries))}
-let settings = JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"cur":1,"bm":5000}');
-
+entries=entries.map(e=>({...e,exchangeUR:Number(e.exchangeUR||0),screenshotSaved:Boolean(e.screenshotSaved)}));
+let purchases=JSON.parse(localStorage.getItem("cg_purchases")||"[]");
+let settings=JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"cur":1,"bm":5000}');
 const $=id=>document.getElementById(id);
-$("rateUR").value=settings.ur;
-$("rateSR").value=settings.sr;
-$("rateCUR").value=settings.cur;
-$("bmPer60").value=settings.bm;
-$("date").value=new Date().toLocaleDateString("sv-SE");
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const pct=(a,b)=>b?((a/b)*100).toFixed(2):"0.00";
+$("rateUR").value=settings.ur;$("rateSR").value=settings.sr;$("rateCUR").value=settings.cur;$("bmPer60").value=settings.bm;
+const today=new Date().toLocaleDateString("sv-SE");$("date").value=today;$("purchaseDate").value=today;
 
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
- document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
- b.classList.add("active");
- document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
- $(b.dataset.tab).classList.remove("hidden");
- render();
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+ document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden");render();
 });
 
 function totals(list=entries){
- let t={pulls:0,urNormal:0,urCollab:0,srNormal:0,srCollab:0};
+ let t={pulls:0,urNormal:0,urCollab:0,srNormal:0,srCollab:0,exchangeUR:0};
  list.forEach(e=>Object.keys(t).forEach(k=>t[k]+=Number(e[k]||0)));
- t.ur=t.urNormal+t.urCollab;
- t.sr=t.srNormal+t.srCollab;
- t.r=t.pulls-t.ur-t.sr;
+ t.ur=t.urNormal+t.urCollab;t.sr=t.srNormal+t.srCollab;t.r=t.pulls-t.ur-t.sr;
  return t;
 }
-const pct=(a,b)=>b?((a/b)*100).toFixed(2):"0.00";
-const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-function verdict(actual, expected){
- const d=actual-expected;
- if(Math.abs(d)<1) return `<span class="pill">ほぼ期待値</span>`;
- return d>0?`<span class="pill good">上振れ</span>`:`<span class="pill bad">下振れ</span>`;
-}
 function setPulls(n){$("pulls").value=n}
-
 function parseQuick(){
  const s=$("quickInput").value.toUpperCase().replace(/：/g,":");
- const sr=s.match(/SR\s*(\d+)\s*:\s*(\d+)/);
- const ur=s.match(/UR\s*(\d+)\s*:\s*(\d+)/);
- if(sr){$("srNormal").value=sr[1];$("srCollab").value=sr[2]}
- if(ur){$("urNormal").value=ur[1];$("urCollab").value=ur[2]}
- if(!sr&&!ur) alert("例：SR 11:18 / UR 4:0 の形で入力してください");
+ const sr=s.match(/SR\s*(\d+)\s*:\s*(\d+)/),ur=s.match(/UR\s*(\d+)\s*:\s*(\d+)/);
+ if(sr){$("srNormal").value=sr[1];$("srCollab").value=sr[2]} if(ur){$("urNormal").value=ur[1];$("urCollab").value=ur[2]}
+ if(!sr&&!ur)alert("例：SR 11:18 / UR 4:0 の形で入力してください");
+}
+
+function binomTail(n,k,p){
+ if(n<=0)return 1;
+ const mean=n*p;
+ let probs=new Array(n+1); probs[0]=Math.pow(1-p,n);
+ for(let i=0;i<n;i++) probs[i+1]=probs[i]*((n-i)/(i+1))*(p/(1-p));
+ if(k<=mean) return probs.slice(0,k+1).reduce((a,b)=>a+b,0);
+ return probs.slice(k).reduce((a,b)=>a+b,0);
+}
+function probText(n,k,p){
+ const q=binomTail(n,k,p);
+ if(q<0.0001)return "<0.01%";
+ return (q*100).toFixed(q<0.01?2:1)+"%";
+}
+function verdict(actual,expected){
+ const d=actual-expected;
+ if(Math.abs(d)<1)return `<span class="pill">ほぼ期待値</span>`;
+ return d>0?`<span class="pill good">上振れ</span>`:`<span class="pill bad">下振れ</span>`;
+}
+
+function grouped(){
+ const g={};entries.forEach(e=>(g[e.collab]??=[]).push(e));return g;
 }
 
 function render(){
- const t=totals();
- const bm=Math.round(t.pulls/60*settings.bm);
+ const t=totals(),bm=Math.round(t.pulls/60*settings.bm);
  $("stats").innerHTML=`
-  <div class="stat"><div class="muted">総連数</div><div class="big">${t.pulls}</div></div>
-  <div class="stat"><div class="muted">UR</div><div class="big gold">${t.ur}</div><div class="muted">${pct(t.ur,t.pulls)}%</div></div>
-  <div class="stat"><div class="muted">コラボUR</div><div class="big gold">${t.urCollab}</div><div class="muted">${pct(t.urCollab,t.pulls)}%</div></div>
-  <div class="stat"><div class="muted">SR</div><div class="big silver">${t.sr}</div><div class="muted">${pct(t.sr,t.pulls)}%</div></div>
-  <div class="stat"><div class="muted">R</div><div class="big">${t.r}</div><div class="muted">${pct(t.r,t.pulls)}%</div></div>
-  <div class="stat"><div class="muted">消費BM</div><div class="big">${bm.toLocaleString()}</div></div>`;
-
- const rows=[
-   ["UR",settings.ur,t.ur],["SR",settings.sr,t.sr],["コラボUR",settings.cur,t.urCollab]
- ].map(([n,r,a])=>{
-   let ex=t.pulls*r/100,d=a-ex;
-   return `<tr><td>${n}</td><td>${r}%</td><td>${ex.toFixed(1)}</td><td>${a}</td><td class="${d>=0?'good':'bad'}">${d>=0?'+':''}${d.toFixed(1)}</td><td>${verdict(a,ex)}</td></tr>`
+ <div class="stat"><div class="muted">総連数</div><div class="big">${t.pulls}</div></div>
+ <div class="stat"><div class="muted">UR</div><div class="big gold">${t.ur}</div><div class="muted">${pct(t.ur,t.pulls)}%</div></div>
+ <div class="stat"><div class="muted">コラボUR</div><div class="big gold">${t.urCollab}</div><div class="muted">${pct(t.urCollab,t.pulls)}%</div></div>
+ <div class="stat"><div class="muted">SR</div><div class="big silver">${t.sr}</div><div class="muted">${pct(t.sr,t.pulls)}%</div></div>
+ <div class="stat"><div class="muted">交換UR</div><div class="big blue">${t.exchangeUR}</div><div class="muted">排出率から除外</div></div>
+ <div class="stat"><div class="muted">消費BM</div><div class="big">${bm.toLocaleString()}</div></div>`;
+ const rows=[["UR",settings.ur,t.ur],["SR",settings.sr,t.sr],["コラボUR",settings.cur,t.urCollab]].map(([n,r,a])=>{
+  let ex=t.pulls*r/100,d=a-ex;return `<tr><td>${n}</td><td>${r}%</td><td>${ex.toFixed(1)}</td><td>${a}</td><td class="${d>=0?'good':'bad'}">${d>=0?'+':''}${d.toFixed(1)}</td></tr>`
  }).join("");
- $("compare").innerHTML=`<table><tr><th>種類</th><th>公表</th><th>期待</th><th>実績</th><th>差</th><th>判定</th></tr>${rows}</table>`;
+ $("compare").innerHTML=`<table><tr><th>種類</th><th>公表</th><th>期待</th><th>実績</th><th>差</th></tr>${rows}</table>`;
 
- const groups={};
- entries.forEach(e=>(groups[e.collab]??=[]).push(e));
- const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ja"));
+ const g=grouped(),names=Object.keys(g).sort((a,b)=>a.localeCompare(b,"ja"));
  $("collabNames").innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
-
  $("collabDetails").innerHTML=names.map(n=>{
-   const x=totals(groups[n]);
-   const urExp=x.pulls*settings.ur/100, curExp=x.pulls*settings.cur/100, srExp=x.pulls*settings.sr/100;
-   return `<div class="detailCard">
-     <div class="entry-title"><span>${esc(n)}</span><span>${x.pulls}連</span></div>
-     <div class="note" style="margin-top:8px">
-       UR ${x.ur}枚（常設${x.urNormal} / コラボ${x.urCollab}）・${pct(x.ur,x.pulls)}% ${verdict(x.ur,urExp)}<br>
-       コラボUR ${x.urCollab}枚・${pct(x.urCollab,x.pulls)}% ${verdict(x.urCollab,curExp)}<br>
-       SR ${x.sr}枚（常設${x.srNormal} / コラボ${x.srCollab}）・${pct(x.sr,x.pulls)}% ${verdict(x.sr,srExp)}
-     </div>
-   </div>`
+  const x=totals(g[n]);
+  return `<div class="detailCard"><div class="entry-title"><span>${esc(n)}</span><span>${x.pulls}連</span></div>
+   <div class="note" style="margin-top:8px">UR ${x.ur}（常設${x.urNormal}/コラボ${x.urCollab}） ${pct(x.ur,x.pulls)}%<br>
+   SR ${x.sr}（常設${x.srNormal}/コラボ${x.srCollab}） ${pct(x.sr,x.pulls)}%<br>
+   交換UR ${x.exchangeUR}枚（排出率には含めない）</div></div>`
  }).join("");
 
- const maxRate=Math.max(settings.sr,20);
- const bar=(name,actual,target,cls="")=>`
-   <div class="chartrow">
-    <div>${name}</div>
-    <div class="bar ${cls}"><div style="width:${Math.min(100,actual/maxRate*100)}%"></div></div>
-    <div>${actual.toFixed(2)}%</div>
-   </div>
-   <div class="note" style="margin:-5px 0 8px 88px">公表 ${target}%</div>`;
- $("rateCharts").innerHTML =
-   bar("UR",t.pulls?t.ur/t.pulls*100:0,settings.ur) +
-   bar("コラボUR",t.pulls?t.urCollab/t.pulls*100:0,settings.cur,"cur") +
-   bar("SR",t.pulls?t.sr/t.pulls*100:0,settings.sr,"sr");
+ $("statJudge").innerHTML=[
+  ["UR",t.ur,settings.ur/100],["コラボUR",t.urCollab,settings.cur/100],["SR",t.sr,settings.sr/100]
+ ].map(([n,k,p])=>{
+  const ex=t.pulls*p,side=k<=ex?"以下":"以上";
+  return `<div class="detailCard"><div class="entry-title"><span>${n}</span><span>${pct(k,t.pulls)}%</span></div>
+   <div class="note">期待値 ${ex.toFixed(1)}枚 / 実績 ${k}枚 ${verdict(k,ex)}<br>
+   公表確率どおりなら「${k}枚${side}」になる確率：<strong>${probText(t.pulls,k,p)}</strong></div></div>`
+ }).join("");
+
+ $("trendChart").innerHTML=buildTrendSvg(entries);
 
  $("ceilingCards").innerHTML=names.map(n=>{
-   const x=totals(groups[n]);
-   const progress=Math.min(100,x.pulls/800*100);
-   const remain=Math.max(0,800-x.pulls);
-   const batches=Math.ceil(remain/60);
-   const needBM=batches*settings.bm;
-   return `<div class="detailCard">
-      <div class="kpi"><strong>${esc(n)}</strong><span>${Math.min(x.pulls,800)} / 800連</span></div>
-      <div class="progress"><div style="width:${progress}%"></div></div>
-      <div class="note" style="margin-top:8px">${
-        remain===0 ? "800連到達済み" :
-        `あと ${remain}連 ／ 60連単位ならあと ${batches}回（${(batches*60)}連）／ 約 ${needBM.toLocaleString()}BM`
-      }</div>
-   </div>`
+  const x=totals(g[n]),remain=Math.max(0,800-x.pulls),batches=Math.ceil(remain/60),needBM=batches*settings.bm;
+  return `<div class="detailCard"><div class="kpi"><strong>${esc(n)}</strong><span>${Math.min(x.pulls,800)} / 800連</span></div>
+   <div class="progress"><div style="width:${Math.min(100,x.pulls/8)}%"></div></div>
+   <div class="note" style="margin-top:8px">${remain===0?"800連到達済み":`あと ${remain}連 / 60連単位なら ${batches}回（${batches*60}連）/ 約 ${needBM.toLocaleString()}BM`}</div></div>`
  }).join("");
 
- $("historyList").innerHTML=[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).map(e=>`
- <div class="entry">
-   <div class="entry-title"><span>${esc(e.collab)}</span><span>${esc(e.date)}</span></div>
-   <div class="muted">${e.pulls}連 / UR 常設${e.urNormal}・コラボ${e.urCollab} / SR 常設${e.srNormal}・コラボ${e.srCollab}</div>
-   ${e.memo?`<div class="note">${esc(e.memo)}</div>`:""}
-   <div class="actions"><button class="danger" onclick="deleteEntry(${e.id})">削除</button></div>
- </div>`).join("");
+ renderMoney(); setupReportSelectors(); renderReport();
+}
+
+function buildTrendSvg(list){
+ let sorted=[...list].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id),cum=0,act=0;
+ if(!sorted.length)return '<div class="note">データなし</div>';
+ const ptsA=[],ptsE=[]; sorted.forEach(e=>{cum+=+e.pulls;act+=+e.urNormal+ +e.urCollab;ptsA.push([cum,act]);ptsE.push([cum,cum*settings.ur/100])});
+ const maxX=Math.max(...ptsA.map(p=>p[0]),60),maxY=Math.max(...ptsA.map(p=>p[1]),...ptsE.map(p=>p[1]),1);
+ const W=720,H=260,pad=36, sx=x=>pad+x/maxX*(W-2*pad), sy=y=>H-pad-y/maxY*(H-2*pad);
+ const pa=ptsA.map(p=>`${sx(p[0])},${sy(p[1])}`).join(" "),pe=ptsE.map(p=>`${sx(p[0])},${sy(p[1])}`).join(" ");
+ return `<svg viewBox="0 0 ${W} ${H}" aria-label="UR推移グラフ">
+ <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#566070"/><line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#566070"/>
+ <polyline fill="none" stroke="#e7bd52" stroke-width="4" points="${pa}"/><polyline fill="none" stroke="#8fc8ff" stroke-width="3" stroke-dasharray="8 7" points="${pe}"/>
+ <text x="${pad}" y="22" fill="#e7bd52" font-size="14">実績UR</text><text x="${pad+90}" y="22" fill="#8fc8ff" font-size="14">期待値2%</text>
+ <text x="${W-pad}" y="${H-10}" fill="#9fa7b7" font-size="12" text-anchor="end">${maxX}連</text></svg>`;
 }
 
 function addEntry(){
- const e={
-   id:Date.now(),date:$("date").value,collab:$("collabName").value.trim(),
-   pulls:+$("pulls").value,urNormal:+$("urNormal").value,urCollab:+$("urCollab").value,
-   srNormal:+$("srNormal").value,srCollab:+$("srCollab").value,memo:$("memo").value.trim()
- };
+ const e={id:Date.now(),date:$("date").value,collab:$("collabName").value.trim(),pulls:+$("pulls").value,
+ urNormal:+$("urNormal").value,urCollab:+$("urCollab").value,srNormal:+$("srNormal").value,srCollab:+$("srCollab").value,
+ exchangeUR:+$("exchangeUR").value,screenshotSaved:$("screenshotSaved").checked,memo:$("memo").value.trim()};
  if(!e.date||!e.collab||e.pulls<=0){alert("日付・コラボ名・連数を入力してください");return}
  if(e.urNormal+e.urCollab+e.srNormal+e.srCollab>e.pulls){alert("UR+SRが連数を超えています");return}
- entries.push(e);
- localStorage.setItem("cg_entries",JSON.stringify(entries));
- $("collabName").value="";$("memo").value="";$("quickInput").value="";
- ["urNormal","urCollab","srNormal","srCollab"].forEach(id=>$(id).value=0);
- $("pulls").value=60;
- alert("保存しました");
- render();
+ entries.push(e);localStorage.setItem("cg_entries",JSON.stringify(entries));
+ ["urNormal","urCollab","srNormal","srCollab","exchangeUR"].forEach(id=>$(id).value=0);
+ $("collabName").value="";$("quickInput").value="";$("memo").value="";$("screenshotSaved").checked=false;$("pulls").value=60;
+ alert("保存しました");render();
 }
-function deleteEntry(id){
- if(confirm("この記録を削除しますか？")){
-   entries=entries.filter(e=>e.id!==id);
-   localStorage.setItem("cg_entries",JSON.stringify(entries));
-   render();
- }
+
+function addPurchase(){
+ const [yen,bm]=$("packSelect").value.split(",").map(Number),qty=+$("packQty").value||1;
+ purchases.push({id:Date.now(),date:$("purchaseDate").value,yen,bm,qty});
+ localStorage.setItem("cg_purchases",JSON.stringify(purchases));$("packQty").value=1;render();
 }
-function saveSettings(){
- settings={ur:+$("rateUR").value,sr:+$("rateSR").value,cur:+$("rateCUR").value,bm:+$("bmPer60").value};
- localStorage.setItem("cg_settings",JSON.stringify(settings));
- render();alert("保存しました");
+function deletePurchase(id){if(confirm("この購入記録を削除しますか？")){purchases=purchases.filter(p=>p.id!==id);localStorage.setItem("cg_purchases",JSON.stringify(purchases));render()}}
+function renderMoney(){
+ const yen=purchases.reduce((s,p)=>s+p.yen*p.qty,0),bm=purchases.reduce((s,p)=>s+p.bm*p.qty,0),t=totals();
+ $("moneyStats").innerHTML=`<div class="grid">
+ <div class="stat"><div class="muted">累計課金</div><div class="big">¥${yen.toLocaleString()}</div></div>
+ <div class="stat"><div class="muted">購入BM</div><div class="big">${bm.toLocaleString()}</div></div>
+ <div class="stat"><div class="muted">1 URあたり</div><div class="big">${t.ur?("¥"+Math.round(yen/t.ur).toLocaleString()):"-"}</div></div>
+ <div class="stat"><div class="muted">1コラボURあたり</div><div class="big">${t.urCollab?("¥"+Math.round(yen/t.urCollab).toLocaleString()):"-"}</div></div></div>`;
+ $("purchaseHistory").innerHTML=[...purchases].sort((a,b)=>b.date.localeCompare(a.date)).map(p=>`<div class="entry"><div class="entry-title"><span>${p.date}</span><span>¥${(p.yen*p.qty).toLocaleString()}</span></div>
+ <div class="muted">${p.bm.toLocaleString()}BM × ${p.qty}個 = ${(p.bm*p.qty).toLocaleString()}BM</div><div class="actions"><button class="danger" onclick="deletePurchase(${p.id})">削除</button></div></div>`).join("")||'<div class="note">購入記録なし</div>';
 }
-function dl(name,text,type){
- const a=document.createElement("a");
- a.href=URL.createObjectURL(new Blob([text],{type}));
- a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+
+function setupReportSelectors(){
+ const years=[...new Set([...entries.map(e=>e.date.slice(0,4)),...purchases.map(p=>p.date.slice(0,4))])].sort().reverse();
+ const current=$("reportYear").value;
+ $("reportYear").innerHTML=years.map(y=>`<option value="${y}">${y}年</option>`).join("");
+ if(current&&years.includes(current))$("reportYear").value=current;
+ if(!$("reportYear").value&&years.length)$("reportYear").value=years[0];
+ const mcur=$("reportMonth").value;
+ $("reportMonth").innerHTML='<option value="all">年間</option>'+Array.from({length:12},(_,i)=>`<option value="${String(i+1).padStart(2,"0")}">${i+1}月</option>`).join("");
+ if(mcur)$("reportMonth").value=mcur;
 }
-function exportJSON(){
- dl("compass-gacha-backup.json",JSON.stringify({entries,settings},null,2),"application/json");
+function renderReport(){
+ const y=$("reportYear").value,m=$("reportMonth").value;if(!y){$("reportBody").innerHTML='<div class="note">データなし</div>';return}
+ const prefix=m==="all"?y:`${y}-${m}`;
+ const es=entries.filter(e=>e.date.startsWith(prefix)),ps=purchases.filter(p=>p.date.startsWith(prefix)),t=totals(es);
+ const yen=ps.reduce((s,p)=>s+p.yen*p.qty,0),bm=ps.reduce((s,p)=>s+p.bm*p.qty,0);
+ const rows=[["UR",settings.ur,t.ur],["コラボUR",settings.cur,t.urCollab],["SR",settings.sr,t.sr]].map(([n,r,a])=>{
+   const ex=t.pulls*r/100,d=a-ex;return `<tr><td>${n}</td><td>${a}</td><td>${ex.toFixed(1)}</td><td>${d>=0?"+":""}${d.toFixed(1)}</td><td>${t.pulls?probText(t.pulls,a,r/100):"-"}</td></tr>`
+ }).join("");
+ $("reportBody").innerHTML=`<div class="grid" style="margin-top:12px">
+ <div class="stat"><div class="muted">総連数</div><div class="big">${t.pulls}</div></div>
+ <div class="stat"><div class="muted">課金額</div><div class="big">¥${yen.toLocaleString()}</div></div>
+ <div class="stat"><div class="muted">購入BM</div><div class="big">${bm.toLocaleString()}</div></div>
+ <div class="stat"><div class="muted">交換UR</div><div class="big">${t.exchangeUR}</div></div></div>
+ <div style="margin-top:12px"><table><tr><th>種類</th><th>実績</th><th>期待</th><th>差</th><th>片側確率</th></tr>${rows}</table></div>`;
 }
+
+function saveSettings(){settings={ur:+$("rateUR").value,sr:+$("rateSR").value,cur:+$("rateCUR").value,bm:+$("bmPer60").value};localStorage.setItem("cg_settings",JSON.stringify(settings));render();alert("保存しました")}
+function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings},null,2),"application/json")}
 function exportCSV(){
- const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,memo\n";
- const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.memo]
- .map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+ const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,exchange_ur,screenshot_saved,memo\n";
+ const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.exchangeUR,e.screenshotSaved,e.memo].map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
  dl("compass-gacha.csv","\ufeff"+head+body,"text/csv");
 }
 function importJSON(ev){
- const f=ev.target.files[0];if(!f)return;
- const r=new FileReader();
- r.onload=()=>{
-   try{
-     const x=JSON.parse(r.result);
-     entries=x.entries||[];
-     settings=x.settings||settings;
-     localStorage.setItem("cg_entries",JSON.stringify(entries));
-     localStorage.setItem("cg_settings",JSON.stringify(settings));
-     location.reload();
-   }catch{alert("読み込みに失敗しました")}
- };
- r.readAsText(f);
+ const f=ev.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
 }
 render();
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body>
 </html>
