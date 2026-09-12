@@ -157,7 +157,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
   <input id="rateScreenshots" class="file-input" type="file" accept="image/*" multiple onchange="handleRateScreenshotFiles(event)">
   <div id="rateFileList" class="note" style="margin-top:8px">スクショ未選択</div>
   <button class="primary" style="width:100%;margin-top:10px" onclick="runRateOCR()">スクショから順位・ptを読み取る</button>
-  <div id="rateOcrStatus" class="ocr-status">OCRは保存前に必ず結果を確認・修正できます。初回のOCRにはネット接続が必要です。</div>
+  <div id="rateOcrStatus" class="ocr-status">ランキング画面専用の行単位読み取りです。保存前に結果を確認・修正できます。</div>
 
   <div class="entry-title" style="margin-top:16px"><span>読み取り結果</span><span class="muted">順位 / pt</span></div>
   <div id="ratePointEditor"></div>
@@ -167,7 +167,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
   <label>メモ（任意）</label><input id="rateObservationMemo" placeholder="例：フォロー欄2枚">
   <button id="rateObservationSaveBtn" class="primary" style="width:100%;margin-top:12px" onclick="saveRateObservation()">この観測を保存</button>
   <button id="rateObservationCancelBtn" class="secondary hidden" style="width:100%;margin-top:8px" onclick="cancelRateObservationEdit()">編集をキャンセル</button>
-  <p class="note">画像内に500位・5000位そのものがいなくても、上下の順位とptから補間します。片側しかない場合は外挿になるため信頼度を下げます。</p>
+  <p class="note">画像内に500位・5000位そのものがいなくても、上下の順位とptから補間します。スクショ読取は「ランキング＞フォロー」の固定画面専用で、各行の順位とptだけを切り出して判定します。怪しい行は⚠を付けます。</p>
  </div>
 
  <div class="card"><h3>現在の推定・最終予想</h3><div id="rateDashboard"><div class="note">観測データを保存すると表示されます。</div></div></div>
@@ -201,7 +201,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
-<div class="version">v5.0</div>
+<div class="version">v5.1</div>
 </div>
 
 <script>
@@ -493,10 +493,10 @@ function renderRatePointEditor(){
  const box=$("ratePointEditor");if(!box)return;
  if(!rateEditorPoints.length){box.innerHTML='<div class="note" style="margin-top:8px">まだ順位データがありません。スクショ読取か手動追加を使ってください。</div>';renderRateEstimatePreview();return}
  rateEditorPoints=normalizePoints(rateEditorPoints);
- box.innerHTML=rateEditorPoints.map((p,i)=>`<div class="rate-point-row"><div><label>順位</label><input type="number" min="1" value="${p.rank}" oninput="updateRatePoint(${i},'rank',this.value)"></div><div><label>pt</label><input type="number" min="1" value="${p.bp}" oninput="updateRatePoint(${i},'bp',this.value)"></div><button class="danger smallbtn" onclick="removeRatePoint(${i})">削除</button></div>`).join("");
+ box.innerHTML=rateEditorPoints.map((p,i)=>`<div class="rate-point-row"><div><label>順位${String(p.source||'').includes('要確認')?' ⚠':''}</label><input type="number" min="1" value="${p.rank}" oninput="updateRatePoint(${i},'rank',this.value)"></div><div><label>pt</label><input type="number" min="1" value="${p.bp}" oninput="updateRatePoint(${i},'bp',this.value)"></div><button class="danger smallbtn" onclick="removeRatePoint(${i})">削除</button></div>`).join("");
  renderRateEstimatePreview();
 }
-function updateRatePoint(i,key,v){if(!rateEditorPoints[i])return;rateEditorPoints[i][key]=Number(v);renderRateEstimatePreview()}
+function updateRatePoint(i,key,v){if(!rateEditorPoints[i])return;rateEditorPoints[i][key]=Number(v);rateEditorPoints[i].source='手動確認済み';renderRateEstimatePreview()}
 function removeRatePoint(i){rateEditorPoints.splice(i,1);renderRatePointEditor()}
 function addRatePoint(){rateEditorPoints.push({rank:0,bp:0,source:"手動"});
  const box=$("ratePointEditor");box.innerHTML+=`<div class="rate-point-row"><div><label>順位</label><input type="number" min="1" value="" oninput="updateRatePoint(${rateEditorPoints.length-1},'rank',this.value)"></div><div><label>pt</label><input type="number" min="1" value="" oninput="updateRatePoint(${rateEditorPoints.length-1},'bp',this.value)"></div><button class="danger smallbtn" onclick="removeRatePoint(${rateEditorPoints.length-1})">削除</button></div>`;renderRateEstimatePreview()}
@@ -529,48 +529,111 @@ function renderRateFileList(){
  el.innerHTML=rateEditorFiles.map(f=>`<div class="rate-file">${esc(f.name)} <span class="muted">${Math.round(f.size/1024).toLocaleString()}KB</span></div>`).join("");
 }
 function fileToImage(file){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=e=>{URL.revokeObjectURL(url);reject(e)};img.src=url})}
-function cropForOCR(img,side){
- const y0=Math.round(img.naturalHeight*0.15),h=Math.round(img.naturalHeight*0.68);let x0,w,invert=false;
- if(side==='rank'){x0=Math.round(img.naturalWidth*0.055);w=Math.round(img.naturalWidth*0.235);invert=true}else{x0=Math.round(img.naturalWidth*0.72);w=Math.round(img.naturalWidth*0.255)}
- const scale=Math.min(1.5,1500/w),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,x0,y0,w,h,0,0,c.width,c.height);
- const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){let g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);if(invert)g=255-g;g=g>145?255:0;d[i]=d[i+1]=d[i+2]=g}ctx.putImageData(im,0,0);return c;
+
+function makeRateAnalysisCanvas(img){
+ const maxW=720,scale=Math.min(1,maxW/img.naturalWidth),c=document.createElement('canvas');
+ c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+ c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,c.width,c.height);return c;
 }
-function wordsFromTesseract(data){
- if(Array.isArray(data.words)&&data.words.length)return data.words.map(w=>({text:w.text,left:w.bbox?.x0||0,top:w.bbox?.y0||0,width:(w.bbox?.x1||0)-(w.bbox?.x0||0),height:(w.bbox?.y1||0)-(w.bbox?.y0||0)}));
- if(data.tsv){return data.tsv.split(/\r?\n/).slice(1).map(line=>line.split('\t')).filter(a=>a.length>=12&&a[0]==='5').map(a=>({left:+a[6],top:+a[7],width:+a[8],height:+a[9],text:a.slice(11).join('\t')}))}
- return [];
+function detectRateRankingRows(c){
+ const ctx=c.getContext('2d',{willReadFrequently:true}),w=c.width,h=c.height,data=ctx.getImageData(0,0,w,h).data;
+ const x0=Math.floor(w*.04),x1=Math.floor(w*.96),step=2,hits=[];
+ for(let y=Math.floor(h*.17);y<Math.floor(h*.83);y++){
+  let dark=0,total=0;
+  for(let x=x0;x<x1;x+=step){const i=(y*w+x)*4,g=data[i]*.299+data[i+1]*.587+data[i+2]*.114;if(g<38)dark++;total++}
+  if(total&&dark/total>.70)hits.push(y);
+ }
+ const groups=[];if(hits.length){let s=hits[0],prev=hits[0];for(let i=1;i<hits.length;i++){const y=hits[i];if(y<=prev+1)prev=y;else{groups.push([s,prev]);s=prev=y}}groups.push([s,prev])}
+ const minThick=Math.max(2,Math.floor(h*.0015));
+ const centers=groups.filter(([a,b])=>b-a+1>=minThick).map(([a,b])=>Math.round((a+b)/2));
+ const rows=[],pad=Math.max(3,Math.floor(h*.002));
+ for(let i=0;i<centers.length-1;i++){const a=centers[i],b=centers[i+1],gap=b-a;if(gap>=h*.045&&gap<=h*.09)rows.push({y0:a+pad,y1:b-pad})}
+ return rows;
 }
-function numericOCRItems(data,min,max){
- const words=wordsFromTesseract(data),out=[];for(const w of words){const m=String(w.text||'').replace(/[OoIl]/g,'').match(/\d{1,6}/);if(!m)continue;const n=Number(m[0]);if(n>=min&&n<=max)out.push({n,y:w.top+w.height/2,synthetic:false})}
- if(out.length)return out.sort((a,b)=>a.y-b.y);
- const nums=(String(data.text||'').match(/\d{1,6}/g)||[]).map(Number).filter(n=>n>=min&&n<=max);return nums.map((n,i)=>({n,y:i*1000,synthetic:true}));
+function rateCropMask(c,row,kind){
+ const ctx=c.getContext('2d',{willReadFrequently:true}),W=c.width,rh=row.y1-row.y0;
+ const y0=Math.max(0,Math.floor(row.y0+rh*.30)),y1=Math.min(c.height,Math.ceil(row.y0+rh*.72));
+ const x0=Math.floor(W*(kind==='rank'?.10:.70)),x1=Math.floor(W*(kind==='rank'?.225:.90));
+ const w=Math.max(1,x1-x0),h=Math.max(1,y1-y0),d=ctx.getImageData(x0,y0,w,h).data,mask=new Uint8Array(w*h);
+ for(let i=0,p=0;i<d.length;i+=4,p++){const g=d[i]*.299+d[i+1]*.587+d[i+2]*.114;mask[p]=(kind==='rank'?g>175:g<80)?1:0}
+ return {mask,w,h,x0,y0};
 }
-function medianGap(items){const gaps=[];for(let i=1;i<items.length;i++){const g=items[i].y-items[i-1].y;if(g>0)gaps.push(g)}return gaps.length?quantile(gaps,.5):180}
-function pairOCR(rankItems,ptItems,source){
- const pairs=[];if(!rankItems.length||!ptItems.length)return pairs;
- const positional=!rankItems.every(x=>x.synthetic)&&!ptItems.every(x=>x.synthetic);
- if(!positional){const n=Math.min(rankItems.length,ptItems.length);for(let i=0;i<n;i++)pairs.push({rank:rankItems[i].n,bp:ptItems[i].n,source});return pairs}
- const threshold=Math.max(55,Math.min(180,Math.min(medianGap(rankItems),medianGap(ptItems))*.46)),used=new Set();
- for(const r of rankItems){let best=-1,dist=Infinity;ptItems.forEach((p,i)=>{if(used.has(i))return;const d=Math.abs(p.y-r.y);if(d<dist){dist=d;best=i}});if(best>=0&&dist<=threshold){used.add(best);pairs.push({rank:r.n,bp:ptItems[best].n,source})}}
- return pairs;
+function rateConnectedComponents(pack){
+ const {mask,w,h}=pack,seen=new Uint8Array(mask.length),out=[],dirs=[-1,0,1];
+ for(let idx=0;idx<mask.length;idx++){
+  if(!mask[idx]||seen[idx])continue;
+  const stack=[idx],pixels=[];seen[idx]=1;let minx=w,miny=h,maxx=-1,maxy=-1;
+  while(stack.length){const q=stack.pop(),y=Math.floor(q/w),x=q-y*w;pixels.push(q);if(x<minx)minx=x;if(x>maxx)maxx=x;if(y<miny)miny=y;if(y>maxy)maxy=y;
+   for(const dy of dirs)for(const dx of dirs){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||nx>=w||ny<0||ny>=h)continue;const ni=ny*w+nx;if(mask[ni]&&!seen[ni]){seen[ni]=1;stack.push(ni)}}
+  }
+  const cw=maxx-minx+1,ch=maxy-miny+1,area=pixels.length;
+  if(area<Math.max(6,h*.15)||ch<h*.30||cw<2)continue;
+  const bm=new Uint8Array(cw*ch);for(const q of pixels){const yy=Math.floor(q/w),xx=q-yy*w;bm[(yy-miny)*cw+(xx-minx)]=1}
+  out.push({x:minx,y:miny,w:cw,h:ch,area,bitmap:bm});
+ }
+ return out.sort((a,b)=>a.x-b.x);
+}
+function normalizeRateGlyph(comp){
+ const TW=24,TH=32,pad=2,out=new Uint8Array(TW*TH),scale=Math.min((TW-pad*2)/comp.w,(TH-pad*2)/comp.h);
+ const nw=Math.max(1,Math.round(comp.w*scale)),nh=Math.max(1,Math.round(comp.h*scale)),ox=Math.floor((TW-nw)/2),oy=Math.floor((TH-nh)/2);
+ for(let y=0;y<nh;y++){const sy=Math.min(comp.h-1,Math.floor(y*comp.h/nh));for(let x=0;x<nw;x++){const sx=Math.min(comp.w-1,Math.floor(x*comp.w/nw));if(comp.bitmap[sy*comp.w+sx])out[(oy+y)*TW+(ox+x)]=1}}
+ return out;
+}
+const RATE_GLYPH_TEMPLATES = {"rank":{"2":["AAAAAAAAAAAAAAAAAAAAAAAAD//8D//8D//8D//8AAA8AAA8AAA8AAf8AB/4AH/gB/gAD+AAH4AAPgAAPgAAPgAAP//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//8D//8D//8D//8AAA8AAA8AAA8AAP8AB/4AH/gB/wAD/AAH4AAPgAAPgAAPgAAP//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAB//4D//8D//8D//8AAA8AAA8AAA8AAB8AAf8AH/gAf+AD/gAH8AAHwAAPgAAPgAAPgAAP//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//4D//8D//8D//8AAA8AAA8AAA8AAH8AA/8AH/gB/4AD/gAH4AAPgAAPgAAPgAAP//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAD//8D//8D//8D//8B//8AAAcAAAcAAA8AAD8AA/8AD/4B/8AD/gAH8AAHwAAPgAAPgAAPgAAP//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA"],"5":["AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8PgAAPgAAPgAAPgAAPgAAPgAAP//8AAB8AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P//8PgAAPgAAPgAAPgAAPgAAP//4P//8AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P//8PgAAPgAAPgAAPgAAPgAAP//4P//8AAB8AAB8AAB8AAB8AAB8AAB8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8PgAAPgAAPgAAPgAAPgAAPgAAP//8P//8AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//4P//8P//8P//8P//8PgAAPgAAPgAAPgAAPgAAPgAAP//8AAB8AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P//8PwAAPwAAPwAAPwAAPwAAP//8P//8P//8AAA8AAA8AAA8AAA8AAA8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA"],"7":["AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAA8AAA8AAB8AAB8AAB4AAD4AAHwAAPgAAPgAAfAAAfAAA+AAA+AAB8AAB8AAD4AAD4AAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P//8AAA8AAB8AAB8AAB4AAD4AADwAAPgAAPgAAfAAAfAAA+AAA+AAB8AAB8AAD4AAD4AAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAH//8P//8P//8P//8H//8AAAcAAA8AAB8AAB8AAB8AAB8AADwAAHwAAPgAAPgAAfAAA+AAA+AAA+AAB+AAB8AAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAH//8P//8P//8P//8AAA8AAA8AAB8AAD4AADwAADwAAHgAAPgAAfAAAeAAAeAAA8AAB8AAD8AAD4AAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAH//8P//8P//8P//8H//8AAAcAAA8AAB8AAB8AAB8AAB8AAD4AAHwAAPgAAPgAAfAAA+AAA+AAA+AAB+AAB8AAAAAAAAAAAAAAAAAAAAAAAAA"],"3":["AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAB8AAB8AAB8AAB8AAB8AAB8A//wA//4AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//4P//8P//8P//8P//8AAB8AAB8AAB8AAB8AAB8A//4A//wAAB8AAB8AAB8AAB8AAB8AAB8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAB8AAB8AAB8AAB8AAB8A//4A//wA//4AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//AP//8P//8P//8P//8AAB8AAB8AAB8AAB8AAB8A//4A//wA//4AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAA8AAA8AAA8AAA8AAA8A//8A//4A//4A//8AAA8AAA8AAA8AAA8AAA8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//gP//8P//8P//8P//8AAB8AAB8AAB8AAB8AAB8A//4A//wA//4AAB8AAB8AAB8AAB8AAB8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAP//wP//8P//8P//8P//8AAA8AAA8AAA8AAA8AAA8A//8A//4A//4A//8AAA8AAA8AAA8AAA8AAA8P//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA"],"8":["AAAAAAAAAAAAAAAAAAAAAAAAB//wH//8H//8P//8PgA8PgA8PgA8HgA8HgA8B//wD//4HgA8HgA8PgA8PgA8PgA8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//4H//8H//8P//8PgA8PgA8PgA8HgA8HgA8B//wD//4HgA8HgA8PgA8PgA8PgA8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAA//gD//4H//8H//8PgA8PgA8PgA8HgA8HgA8D//4B//wDgA4HgA8PgA8PgA8PgA8P//8H//8H//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8H//8P//8PgA8PgA8PgA8HgA8DgA4B//wD//4HgA8HgA8PgA8PgA8PgA8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//wD//8H//8H//8PgA8PgA8PgA8HgA8HgA8D//4B//wDgA4HgA8PgA8PgA8PgA8P//8H//8H//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAf/gD//8H//8H//8P//8PgAcPgAcPgAcHgAcHgAcDgAcB//8DwAcHgAcHgAcHgAcPgAcPgAcP//8H//8H//8D//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8H//8P//8PgA8PgA8PgA8HgA8HgA8B//wD//4HgA8HgA8PgA8PgA8PgA8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA"],"9":["AAAAAAAAAAAAAAAAAAAAAAAAB//wH//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8H//8B//8AAA8AAA8AAA8AAA8D//8D//8D//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8P//8P//8PgA8PgA8PgA8PgA8PgA8HgA8D//8AAA8AAA8AAA8AAA8AAA8D//8D//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8D//8A//8AAA8AAA8AAA8AAA8D//8D//8D//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAB//wH//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8H//8B//8AAA8AAA8AAA8AAA8AAA8D//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8H//8P//8PgA8PgA8PgA8PgA8PgA8HgA8D//8A//8AAA8AAA8AAA8AAA8D//8D//8D//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA"],"0":["AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAD//8H//8H//8P//8PgA8PgAcPgAcPgAcPgAcPgAcPgAcPgAcPgAcPgAcPgAcPgAcPgAcP//8H//8H//8D//8AAAAAAAAAAAAAAAAAAAAAAAA"],"4":["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHwAAfwAA/wAD/wAD/wAPnwAfHwB8HwD4HwHgHwPgHwP//8P//8H//8AAHwAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAPwAAfwAA/wAB/wAH3wAPnwAfHwB8HwD4HwHwHwPAHwOAHwP//8P//8P//8AAHwAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAHgAAPwAA/wAB/wAD/wAH3wAfHwA+HwB8HwHwHwPgHwPAHwP//8P//8H//8AAHwAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAfwAA/wAD/wAH3wAPnwA+HwB8HwHwHwHgHwPgHwP//8P//8H//8AAHwAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAfwAA/wAD/wAD/wAPnwAfHwB8HwH4HwHgHwPgHwP//8P//8H//8AAHwAAHwAAHwAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAA"],"1":["AAAAAAAAAAeAAAeAAA+AAD+AAH+AA/+AA/+AAD+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAAAAAAAA","AAAAAAAAAAHAAAHAAAPAAB/AAD/AAP/AAP/AA//AA//AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAB/AAAAAAAAA","AAAAAAAAAAEAAAEAAAeAAA+AAD+AAH+AA/+AA/+AAD+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAAAAAAAA","AAAAAAAAAAeAAAeAAA+AAD+AAH+AAP+AA/+AA/+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAB+AAAAAAAAA"],"6":["AAAAAAAAAAAAAAAAAAAAAAAAAf/wD//4H//4H//4PgAAPgAAPgAAPgAAPgAAP//4P//8PgA8PgA8PgA8PgA8PgA8PgA8P//8H//8H//4AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//4H//4H//4P//4PgAAPgAAPgAAPgAAPwAAP//8PgA8PgA8PgA8PgA8PgA8PgA8P//8H//8H//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA"]},"pt":{"4":["AAAAAAAAAAAAAAAAAAAAAAAAAAPwAAPwAA/wAB/wAH7wAPjwAfDwB8DwD4DwPgDwPgDwOADwP//8P//8P//8AADwAADwAADwAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAPwAAPwAAfwAB/wAD/wAPzwAfDwB+DwD4DwPwDwPgDwOADwP//8P//8P//8AADwAADwAADwAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAPwAAfwAA/wAD/wAHzwAfjwAeDwB+DwD4DwPwDwPADwPADwP//8P//8P//8AADwAADwAADwAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAfwAA/wAD/wAHzwAfjwAeDwB+DwD4DwPwDwPADwPADwP//8P//8P//8AADwAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAPwAAPwAAfwAB/wAH/wAPzwAfDwB+DwD4DwPwDwPgDwOADwP//8P//8P//8AADwAADwAADwAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAPwAAfwAA/wAD/wAHzwAfjwAeDwB+DwD4DwPwDwPADwOADwP//8P//8P//8AADwAADwAADwAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAA"],"8":["AAAAAAAAAAAAAAAAAAAAB//wH//8P//8P//8PgA8PgA8PgA8PgA8PgA8H/54B//wD//wPgA8PgA8PgA8PgA8PgA8PgA8P//8P//8H//4AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAB//wH//8P//8P//8PgA8PgA8PgA8PgA8PgA8H//4B//wB//wPgA8PgA8PgA8PgA8PgA8PgA8P//8P//8H//4AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAB//wH//8P//8P//8PgB8PgA8PgA8PgA8PgA8HgA8B//wB//wHgA8PgA8PgA8PgA8PgA8PgA8P//8P//8H//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAB//wH//8P//8P//8PgA8PgA8PgA8PgA8PgA8HgA8B//wB//wHgA8PgA8PgA8PgA8PgA8PgA8P//8P//8H//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4P//8P//8P//8PgA8PgA8PgA8PgA8PgA8D//wB//wD//4PgA8PgA8PgA8PgA8PgA8P//8P//8H//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAB//wH//8P//8P//8PgA8PgA8PgA8PgA8PgA8H//4B//wD//wPgA8PgA8PgA8PgA8PgA8PgA8P//8P//8H//4AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAB//wH//8P//8P//8PgA8PgA8PgA8PgA8PgA8HgA8B//wB//wPgA8PgA8PgA8PgA8PgA8PgA8P//8P//8H//8AAAAAAAAAAAAAAAAAAAAAAAA"],"7":["AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAB8AAA8AAB8AAB4AAB4AAHwAAHwAAPwAAPgAAPAAAfAAA+AAB+AAB8AAD4AAD4AAHwAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P//8AAA8AAB8AAB8AAB4AADwAAHwAAPwAAPgAAPAAAfAAA+AAB+AAB+AAB4AAD4AADwAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAA8AAA8AAB8AAB4AAD4AAHwAAHwAAPwAAPAAAfAAAeAAA+AAB+AAB8AAD4AAD4AAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAB8AAA8AAB8AAB4AAB4AAHwAAHwAAPwAAPgAAPAAAfAAA+AAB+AAB8AAB4AAD4AAHwAAAAAAAAAAAAAAAAAAAAAAAAA"],"5":["AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P4f4PgAAPgAAPgAAPgAAPwAAP//4P//8AAA8AAA8AAA8AAA8AAA8AAA8H//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8Pz/wPgAAPgAAPgAAPgAAPwAAP//4P//8AAA8AAA8AAA8AAA8AAA8AAA8H//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8P//8PgAAPgAAPgAAPgAAPgAAP//wP//8H//8AAA8AAA8AAA8AAA8AAA8AAB8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8PwAAPgAAPgAAPgAAPgAAP//8P//8P//8AAA8AAA8AAA8AAA8AAA8P//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8PwAAPgAAPgAAPgAAPgAAPwAAP//4P//8AAA8AAA8AAA8AAA8AAA8AAA8H//8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA"],"6":["AAAAAAAAAAAAAAAAAAAAAAAAB//8D//8H//8H//8P//4PgAAPgAAPgAAPgAAP//8P//8PgA8PgA8PgA8PgA8PgA8PgA8P//8H//8H//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//8H//8H//8P//8PgAAPgAAPgAAPgAAP//4P//8PgA8PgA8PgA8PgA8PgA8PgA8P//8H//8H//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//8D//8H//8H//8PgAAPgAAPgAAPgAAPgAAP//8PgB8PgA8PgA8PgA8PgA8PgA8Pw/8H//8H//8D//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//8D//8H//8H//8PgAAPgAAPgAAPgAAPgAAP//8PgA8PgA8PgA8PgA8PgA8PgA8P4/8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//8D//8H//8H//8PgAAPgAAPgAAPgAAPgAAP//8PgA8PgA8PgA8PgA8PgA8PgA8P8/8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAA"],"3":["AAAAAAAAAAAAAAAAAAAAP//4P//8P//8P//8AAA8AAA8AAA8AAA8AAA8AAA8A//4A//wA//8AAA8AAA8AAA8AAA8AAA8AAB8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//4P//8P//8P//8AAA8AAA8AAA8AAA8AAA8AAA8A//8A//wA//8AAA8AAA8AAA8AAA8AAA8AAA8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//8P//8P//8P//8AAA8AAA8AAA8AAA8AAA8A/78A//wA//4AAA8AAA8AAA8AAA8AAA8AAA8P//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAP//4P//8P//8P//8AAA8AAA8AAA8AAA8AAA8AAA8A//4A//4A//8AAA8AAA8AAA8AAA8AAA8AAB8P//8P//8P//8AAAAAAAAAAAAAAAAAAAA"],"0":["AAAAAAAAAAAAAAAAAAAAAAAAB//wD//8H//8H//8PgB8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8H//8D//8D//4AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAAAAAB//4D//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8H//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//4D//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8H//8H//8D//4AAAAAAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAB//wD//8H//8P//8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8PgA8HgB8H//8D//8B//4AAAAAAAAAAAAAAAAAAAAAAAA"],"9":["AAAAAAAAAAAAAAAAAAAAAAAAB//wD//8H//8P//8PgA8PgA8PgA8PgA8PgA8HgA8H//8D//8A//8AAA8AAA8AAA8AAA8D//8D//8D//8AAAAAAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAAAAAAD//4H//8H//8P8/8PgA8PgA8PgA8PgA8PgA8HgA8D//8B//8AAA8AAA8AAA8AAA8D//8D//8D//8AAAAAAAAAAAAAAAAAAAAAAAAAAAA"],"1":["AAAAAAAAAAeAAAeAAB+AAD+AAP+AAf+AA/+AA/+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAD+AAAAAAAAA"],"2":["AAAAAAAAAAAAAAAAAAAAAAAAB//4B//8B//8B//8B8f8AAA8AAA8AAB8AA/8AD/4A/8AB/wAD/AAHgAAHgAAPgAAPgAAP//8P//8P//8AAAAAAAAAAAAAAAAAAAAAAAA"]}};
+const rateTemplateCache=new Map();
+function decodeRateTemplate(s){
+ if(rateTemplateCache.has(s))return rateTemplateCache.get(s);
+ const raw=atob(s),out=new Uint8Array(24*32);for(let i=0;i<out.length;i++)out[i]=(raw.charCodeAt(i>>3)>>(7-(i&7)))&1;
+ rateTemplateCache.set(s,out);return out;
+}
+function recognizeRateGlyph(vec,kind){
+ const rows=[];for(const [digit,list] of Object.entries(RATE_GLYPH_TEMPLATES[kind]||{})){let best=Infinity;
+  for(const s of list){const t=decodeRateTemplate(s);let diff=0;for(let i=0;i<vec.length;i++)if(vec[i]!==t[i])diff++;if(diff<best)best=diff}
+  rows.push({digit,dist:best/vec.length});
+ }
+ rows.sort((a,b)=>a.dist-b.dist);const a=rows[0],b=rows[1]||{dist:1};
+ return a?{digit:a.digit,dist:a.dist,margin:b.dist-a.dist}:null;
+}
+function pointDigitComponents(comps,cropWidth){
+ if(!comps.length)return[];let cut=null;
+ for(let i=0;i<comps.length-1;i++){const gap=comps[i+1].x-(comps[i].x+comps[i].w);if(i>=2&&gap>cropWidth*.035){cut=i+1;break}}
+ if(cut==null){if(comps.length>=6)cut=4;else cut=Math.min(5,comps.length)}
+ return comps.slice(0,cut);
+}
+function recognizeRateRow(c,row,source){
+ const rankPack=rateCropMask(c,row,'rank'),ptPack=rateCropMask(c,row,'pt');
+ const rankComps=rateConnectedComponents(rankPack),ptComps=pointDigitComponents(rateConnectedComponents(ptPack),ptPack.w);
+ if(rankComps.length<2||rankComps.length>5||ptComps.length<3||ptComps.length>5)return null;
+ const rr=rankComps.map(x=>recognizeRateGlyph(normalizeRateGlyph(x),'rank')),pp=ptComps.map(x=>recognizeRateGlyph(normalizeRateGlyph(x),'pt'));
+ if(rr.some(x=>!x)||pp.some(x=>!x))return null;
+ const rank=Number(rr.map(x=>x.digit).join('')),bp=Number(pp.map(x=>x.digit).join(''));
+ if(!Number.isFinite(rank)||!Number.isFinite(bp)||rank<1||rank>99999||bp<1500||bp>9999)return null;
+ const all=[...rr,...pp],avgDist=all.reduce((s,x)=>s+x.dist,0)/all.length,minMargin=Math.min(...all.map(x=>x.margin));
+ return {rank,bp,source,y:(row.y0+row.y1)/2,weak:avgDist>.18||minMargin<.008,avgDist,minMargin};
+}
+function validateRecognizedRows(rows){
+ const x=[...rows].sort((a,b)=>a.y-b.y);for(let i=0;i<x.length;i++){const cur=x[i],prev=x[i-1];cur.orderWarning=false;if(prev&&(cur.rank<=prev.rank||cur.bp>prev.bp+3))cur.orderWarning=true}
+ return x;
 }
 async function runRateOCR(){
  if(!rateEditorFiles.length){alert('先にスクショを選択してください');return}
- const status=$("rateOcrStatus");status.textContent='OCRを準備しています…';
+ const status=$("rateOcrStatus");status.textContent='ランキング画面を行ごとに解析しています…';
  try{
-  await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js','Tesseract');
-  const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status){const pct=Number.isFinite(m.progress)?` ${Math.round(m.progress*100)}%`:'';status.textContent=`${m.status}${pct}`}}});
-  await worker.setParameters({tessedit_char_whitelist:'0123456789ptPT',tessedit_pageseg_mode:'6'});
-  const found=[];for(let i=0;i<rateEditorFiles.length;i++){
-   status.textContent=`${i+1}/${rateEditorFiles.length}枚目を解析中…`;const img=await fileToImage(rateEditorFiles[i]),left=cropForOCR(img,'rank'),right=cropForOCR(img,'pt');
-   const a=await worker.recognize(left,{}, {tsv:true}),b=await worker.recognize(right,{}, {tsv:true});
-   const ranks=numericOCRItems(a.data,1,99999),pts=numericOCRItems(b.data,1500,99999);found.push(...pairOCR(ranks,pts,rateEditorFiles[i].name));
+  const found=[];let skipped=0,warnings=0,totalRows=0;
+  for(let i=0;i<rateEditorFiles.length;i++){
+   status.textContent=`${i+1}/${rateEditorFiles.length}枚目：行を検出して数字だけ読み取り中…`;
+   const img=await fileToImage(rateEditorFiles[i]),c=makeRateAnalysisCanvas(img),rows=detectRateRankingRows(c);totalRows+=rows.length;
+   const recognized=validateRecognizedRows(rows.map(r=>recognizeRateRow(c,r,rateEditorFiles[i].name)).filter(Boolean));
+   for(const r of recognized){const warn=r.weak||r.orderWarning;if(warn)warnings++;found.push({rank:r.rank,bp:r.bp,source:warn?'スクショ専用読取・要確認':'スクショ専用読取'})}
+   skipped+=Math.max(0,rows.length-recognized.length);
   }
-  await worker.terminate();
-  if(found.length){rateEditorPoints=normalizePoints([...rateEditorPoints,...found]);renderRatePointEditor();status.textContent=`${found.length}件を読み取りました。数字を確認してから保存してください。`}
-  else status.textContent='数字を読み取れませんでした。手動追加で入力できます。';
- }catch(e){console.error(e);status.textContent='OCRに失敗しました。通信状態を確認するか、手動追加を使ってください。';}
+  if(found.length){
+   rateEditorPoints=normalizePoints([...rateEditorPoints,...found]);renderRatePointEditor();
+   status.textContent=`${found.length}件を読み取りました（検出${totalRows}行）。${warnings?`⚠ 要確認 ${warnings}件。`:''}${skipped?` 読めなかった行 ${skipped}件。`:''} 保存前に数字を確認してください。`;
+  }else status.textContent='ランキング行は見つかりましたが数字を確定できませんでした。スクショが「ランキング＞フォロー」の画面か確認し、必要なら手動追加を使ってください。';
+ }catch(e){console.error(e);status.textContent='スクショ解析に失敗しました。画像を選び直すか、手動追加を使ってください。';}
 }
+
 function observationFingerprint(season,at,points){const minute=String(at||'').slice(0,16),p=normalizePoints(points).map(x=>`${x.rank}:${x.bp}`).join('|');return `${season}|${minute}|${p}`}
 function saveRateObservation(){
  const season=$("rateSeasonName").value.trim(),observedAt=$("rateObservedAt").value,memo=$("rateObservationMemo").value.trim(),points=normalizePoints(rateEditorPoints);
@@ -583,7 +646,7 @@ function saveRateObservation(){
  if(wasEditing)rateObservations=rateObservations.map(o=>o.id===editingRateObservationId?item:o);else rateObservations.push(item);
  localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));rateSeason.name=season;localStorage.setItem('cg_rate_season',JSON.stringify(rateSeason));resetRateObservationEditor();renderRateDashboard();alert(wasEditing?'更新しました':'保存しました');
 }
-function resetRateObservationEditor(){editingRateObservationId=null;rateEditorPoints=[];rateEditorFiles=[];$("rateScreenshots").value='';$("rateObservationMemo").value='';$("rateEditorTitle").textContent='現在ボーダーを追加';$("rateObservationSaveBtn").textContent='この観測を保存';$("rateObservationCancelBtn").classList.add('hidden');setRateObservedNow();renderRateFileList();renderRatePointEditor();$("rateOcrStatus").textContent='OCRは保存前に必ず結果を確認・修正できます。初回のOCRにはネット接続が必要です。'}
+function resetRateObservationEditor(){editingRateObservationId=null;rateEditorPoints=[];rateEditorFiles=[];$("rateScreenshots").value='';$("rateObservationMemo").value='';$("rateEditorTitle").textContent='現在ボーダーを追加';$("rateObservationSaveBtn").textContent='この観測を保存';$("rateObservationCancelBtn").classList.add('hidden');setRateObservedNow();renderRateFileList();renderRatePointEditor();$("rateOcrStatus").textContent='ランキング画面専用の行単位読み取りです。保存前に結果を確認・修正できます。'}
 function editRateObservation(id){const o=rateObservations.find(x=>x.id===id);if(!o)return;editingRateObservationId=id;rateEditorPoints=(o.points||[]).map(x=>({...x}));rateEditorFiles=[];$("rateScreenshots").value='';$("rateSeasonName").value=o.season;$("rateObservedAt").value=o.observedAt;$("rateObservationMemo").value=o.memo||'';$("rateEditorTitle").textContent='観測データを編集';$("rateObservationSaveBtn").textContent='変更を保存';$("rateObservationCancelBtn").classList.remove('hidden');updateObservedAtLabel();renderRateFileList();renderRatePointEditor();document.getElementById('rate').scrollIntoView({behavior:'smooth',block:'start'})}
 function cancelRateObservationEdit(){resetRateObservationEditor()}
 function deleteRateObservation(id){if(!confirm('この観測データを削除しますか？'))return;rateObservations=rateObservations.filter(o=>o.id!==id);localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));if(editingRateObservationId===id)resetRateObservationEditor();renderRateDashboard()}
