@@ -47,6 +47,9 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
 .ocr-status{padding:10px;border-radius:11px;background:#14171e;border:1px solid var(--line);margin-top:9px;font-size:12px;color:var(--muted)}
 .rate-chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 0;font-size:12px;color:var(--muted)}
 .file-input{padding:8px}.smallbtn{padding:8px 10px;font-size:12px}.nowrap{white-space:nowrap}
+.pace-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.pace-cell{background:#171a21;border:1px solid var(--line);border-radius:11px;padding:9px;text-align:center}.pace-cell .v{font-size:16px;font-weight:800;margin-top:3px}
+.ocr-preview-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}.ocr-preview-item{background:#14171e;border:1px solid var(--line);border-radius:10px;padding:7px}.ocr-preview-item img{width:100%;border-radius:7px;display:block}.archive-row{padding:10px 0;border-bottom:1px solid var(--line)}.archive-row:last-child{border-bottom:0}
+@media(max-width:640px){.pace-grid{grid-template-columns:repeat(2,1fr)}.ocr-preview-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.rate-preview{grid-template-columns:1fr}.rate-point-row{grid-template-columns:1fr 1fr auto}}
 @media(min-width:720px){.grid{grid-template-columns:repeat(6,1fr)}.tabs{grid-template-columns:repeat(8,1fr)}}
 </style>
@@ -140,9 +143,13 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
    <div><label>シーズン終了日時</label><input id="rateSeasonEnd" type="datetime-local"></div>
    <div><label>安全マージン</label><input id="rateMargin" type="number" min="0" step="10" value="50"></div>
   </div>
-  <label>自分の現在pt（任意）</label><input id="rateSelfBp" type="number" min="0" step="1" placeholder="例：4644">
+  <div class="row">
+   <div><label>自分の現在pt（任意）</label><input id="rateSelfBp" type="number" min="0" step="1" placeholder="例：4644"></div>
+   <div><label>1勝あたりの増加pt目安</label><input id="rateWinGain" type="number" min="1" step="1" value="25"></div>
+  </div>
   <button class="secondary" style="width:100%;margin-top:12px" onclick="saveRateSeasonSettings()">シーズン設定を保存</button>
-  <p class="note">終了日時を入れると、残り時間・直近の伸び・過去シーズンの伸びを組み合わせて最終ボーダーを予想します。</p>
+  <button class="secondary" style="width:100%;margin-top:8px" onclick="startNewRateSeason()">新しいシーズンを開始</button>
+  <p class="note">終了日時を入れると、短時間の急変に引っ張られすぎないよう1・3・6・12・24時間の伸びと過去シーズンを組み合わせて最終ボーダーを予想します。</p>
  </div>
 
  <div class="card">
@@ -158,6 +165,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
   <div id="rateFileList" class="note" style="margin-top:8px">スクショ未選択</div>
   <button class="primary" style="width:100%;margin-top:10px" onclick="runRateOCR()">スクショから順位・ptを読み取る</button>
   <div id="rateOcrStatus" class="ocr-status">ランキング画面専用の行単位読み取りです。保存前に結果を確認・修正できます。</div>
+  <details style="margin-top:8px"><summary class="note" style="cursor:pointer">解析プレビューを見る</summary><div id="rateOcrPreview" class="ocr-preview-grid"><div class="note">解析後に表示します。</div></div></details>
 
   <div class="entry-title" style="margin-top:16px"><span>読み取り結果</span><span class="muted">順位 / pt</span></div>
   <div id="ratePointEditor"></div>
@@ -171,8 +179,19 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 
  <div class="card"><h3>現在の推定・最終予想</h3><div id="rateDashboard"><div class="note">観測データを保存すると表示されます。</div></div></div>
+ <div class="card"><h3>伸び方の分析</h3><div id="ratePaceAnalysis"><div class="note">観測データが2回以上あると表示されます。</div></div></div>
  <div class="card"><h3>ボーダー推移</h3><div id="rateTrendChart"><div class="note">観測データなし</div></div><div class="rate-chart-legend"><span>500位</span><span>5000位</span></div></div>
  <div class="card"><h3>観測履歴</h3><div id="rateObservationHistory"><div class="note">観測データなし</div></div></div>
+ <details class="card" open>
+  <summary style="font-weight:800;cursor:pointer">シーズン最終結果・予想精度</summary>
+  <p class="note">シーズン終了後に実際の最終ボーダーを登録すると、予想との差を記録し、次回以降の予想に小さく補正をかけます。</p>
+  <div class="row"><div><label>500位 最終pt</label><input id="rateFinal500" placeholder="例：S7/050 または 5050"></div><div><label>5000位 最終pt</label><input id="rateFinal5000" placeholder="例：S5/170 または 4170"></div></div>
+  <button class="secondary" style="width:100%;margin-top:10px" onclick="saveRateFinalResult()">このシーズンの最終結果を保存</button>
+  <div id="rateAccuracySummary" style="margin-top:12px"></div>
+ </details>
+ <details class="card">
+  <summary style="font-weight:800;cursor:pointer">シーズン履歴</summary><div id="rateSeasonArchive" style="margin-top:10px"></div>
+ </details>
 
  <details class="card">
   <summary style="font-weight:800;cursor:pointer">正確な過去データを追加</summary>
@@ -201,7 +220,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
-<div class="version">v5.1</div>
+<div class="version">v5.2</div>
 </div>
 
 <script>
@@ -223,10 +242,11 @@ let settings=JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"c
 let rateCustom=JSON.parse(localStorage.getItem("cg_rate_history_custom")||"[]");
 let ratePrefs=JSON.parse(localStorage.getItem("cg_rate_prefs")||'{}');
 let rateObservations=JSON.parse(localStorage.getItem("cg_rate_observations")||"[]");
+let rateFinalResults=JSON.parse(localStorage.getItem("cg_rate_final_results")||"[]");
 let rateSeason=JSON.parse(localStorage.getItem("cg_rate_season")||"null");
 if(!rateSeason){
  const legacySelf=ratePrefs.selfRank?(1500+(Number(ratePrefs.selfRank)*500)+Number(ratePrefs.selfPt||0)):"";
- rateSeason={name:"",endAt:"",selfBp:legacySelf,margin:Number(ratePrefs.margin??50)};
+ rateSeason={name:"",endAt:"",selfBp:legacySelf,margin:Number(ratePrefs.margin??50),winGain:25};
 }
 let rateEditorPoints=[];
 let rateEditorFiles=[];
@@ -271,6 +291,7 @@ $("rateSeasonName").value=rateSeason.name||"";
 $("rateSeasonEnd").value=rateSeason.endAt||"";
 $("rateMargin").value=rateSeason.margin??50;
 $("rateSelfBp").value=rateSeason.selfBp||"";
+$("rateWinGain").value=rateSeason.winGain||25;
 setRateObservedNow();
 renderRatePointEditor();
 
@@ -453,8 +474,13 @@ function dayName(v){const d=new Date(v);return Number.isNaN(d.getTime())?"-":new
 function setRateObservedNow(){$("rateObservedAt").value=localDateTimeValue(new Date());updateObservedAtLabel()}
 function updateObservedAtLabel(){$("rateObservedDay").textContent=dayName($("rateObservedAt").value)}
 function saveRateSeasonSettings(){
- rateSeason={name:$("rateSeasonName").value.trim(),endAt:$("rateSeasonEnd").value,selfBp:$("rateSelfBp").value===""?"":Number($("rateSelfBp").value),margin:Math.max(0,Number($("rateMargin").value)||0)};
+ rateSeason={name:$("rateSeasonName").value.trim(),endAt:$("rateSeasonEnd").value,selfBp:$("rateSelfBp").value===""?"":Number($("rateSelfBp").value),margin:Math.max(0,Number($("rateMargin").value)||0),winGain:Math.max(1,Number($("rateWinGain").value)||25)};
  localStorage.setItem("cg_rate_season",JSON.stringify(rateSeason));renderRateDashboard();alert("シーズン設定を保存しました");
+}
+function startNewRateSeason(){
+ if(rateSeason.name&&!confirm('現在のシーズン設定を切り替えます。観測履歴は消えません。'))return;
+ rateSeason={name:'',endAt:'',selfBp:'',margin:50,winGain:25};localStorage.setItem('cg_rate_season',JSON.stringify(rateSeason));
+ $("rateSeasonName").value='';$("rateSeasonEnd").value='';$("rateSelfBp").value='';$("rateMargin").value=50;$("rateWinGain").value=25;$("rateFinal500").value='';$("rateFinal5000").value='';renderRateDashboard();
 }
 function mergedRateHistory(target,day){
  const map=new Map();
@@ -615,18 +641,24 @@ function validateRecognizedRows(rows){
  const x=[...rows].sort((a,b)=>a.y-b.y);for(let i=0;i<x.length;i++){const cur=x[i],prev=x[i-1];cur.orderWarning=false;if(prev&&(cur.rank<=prev.rank||cur.bp>prev.bp+3))cur.orderWarning=true}
  return x;
 }
+function makeRateRowPreview(c,row,label){
+ const W=c.width,rh=row.y1-row.y0,y0=Math.max(0,Math.floor(row.y0)),h=Math.max(1,Math.floor(rh)),out=document.createElement('canvas');out.width=W;out.height=h;const ctx=out.getContext('2d');ctx.drawImage(c,0,y0,W,h,0,0,W,h);ctx.lineWidth=Math.max(2,W*.004);ctx.strokeStyle='#e7bd52';ctx.strokeRect(W*.10,h*.30,W*.125,h*.42);ctx.strokeStyle='#8fc8ff';ctx.strokeRect(W*.70,h*.30,W*.20,h*.42);return `<div class="ocr-preview-item"><div class="note">${esc(label)}</div><img src="${out.toDataURL('image/jpeg',.72)}" alt="解析行プレビュー"></div>`;
+}
+
 async function runRateOCR(){
  if(!rateEditorFiles.length){alert('先にスクショを選択してください');return}
  const status=$("rateOcrStatus");status.textContent='ランキング画面を行ごとに解析しています…';
  try{
-  const found=[];let skipped=0,warnings=0,totalRows=0;
+  const found=[];let skipped=0,warnings=0,totalRows=0;const previews=[];
   for(let i=0;i<rateEditorFiles.length;i++){
    status.textContent=`${i+1}/${rateEditorFiles.length}枚目：行を検出して数字だけ読み取り中…`;
    const img=await fileToImage(rateEditorFiles[i]),c=makeRateAnalysisCanvas(img),rows=detectRateRankingRows(c);totalRows+=rows.length;
+   if(previews.length<10)rows.slice(0,Math.max(0,10-previews.length)).forEach((r,j)=>previews.push(makeRateRowPreview(c,r,`${rateEditorFiles[i].name} / 行${j+1}`)));
    const recognized=validateRecognizedRows(rows.map(r=>recognizeRateRow(c,r,rateEditorFiles[i].name)).filter(Boolean));
    for(const r of recognized){const warn=r.weak||r.orderWarning;if(warn)warnings++;found.push({rank:r.rank,bp:r.bp,source:warn?'スクショ専用読取・要確認':'スクショ専用読取'})}
    skipped+=Math.max(0,rows.length-recognized.length);
   }
+  if($("rateOcrPreview"))$("rateOcrPreview").innerHTML=previews.join('')||'<div class="note">行を検出できませんでした。</div>';
   if(found.length){
    rateEditorPoints=normalizePoints([...rateEditorPoints,...found]);renderRatePointEditor();
    status.textContent=`${found.length}件を読み取りました（検出${totalRows}行）。${warnings?`⚠ 要確認 ${warnings}件。`:''}${skipped?` 読めなかった行 ${skipped}件。`:''} 保存前に数字を確認してください。`;
@@ -644,14 +676,19 @@ function saveRateObservation(){
  if(!editingRateObservationId&&fileMeta.length){const same=rateObservations.find(o=>(o.files||[]).some(a=>fileMeta.some(b=>a.name===b.name&&a.size===b.size&&a.lastModified===b.lastModified)));if(same){alert('同じスクショがすでに登録されています');return}}
  const wasEditing=Boolean(editingRateObservationId),item={id:editingRateObservationId||Date.now(),season,observedAt,points,memo,files:fileMeta,updatedAt:new Date().toISOString()};
  if(wasEditing)rateObservations=rateObservations.map(o=>o.id===editingRateObservationId?item:o);else rateObservations.push(item);
- localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));rateSeason.name=season;localStorage.setItem('cg_rate_season',JSON.stringify(rateSeason));resetRateObservationEditor();renderRateDashboard();alert(wasEditing?'更新しました':'保存しました');
+ rateSeason.name=season;localStorage.setItem('cg_rate_season',JSON.stringify(rateSeason));
+ const f500=targetForecast(500,season),f5000=targetForecast(5000,season);item.forecasts=wasEditing&&existingObs&&existingObs.forecasts?existingObs.forecasts:{500:f500&&f500.pred!=null?f500.pred:null,5000:f5000&&f5000.pred!=null?f5000.pred:null,at:new Date().toISOString()};
+ rateObservations=rateObservations.map(o=>o.id===item.id?item:o);localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));resetRateObservationEditor();renderRateDashboard();alert(wasEditing?'更新しました':'保存しました');
 }
-function resetRateObservationEditor(){editingRateObservationId=null;rateEditorPoints=[];rateEditorFiles=[];$("rateScreenshots").value='';$("rateObservationMemo").value='';$("rateEditorTitle").textContent='現在ボーダーを追加';$("rateObservationSaveBtn").textContent='この観測を保存';$("rateObservationCancelBtn").classList.add('hidden');setRateObservedNow();renderRateFileList();renderRatePointEditor();$("rateOcrStatus").textContent='ランキング画面専用の行単位読み取りです。保存前に結果を確認・修正できます。'}
+function resetRateObservationEditor(){editingRateObservationId=null;rateEditorPoints=[];rateEditorFiles=[];$("rateScreenshots").value='';$("rateObservationMemo").value='';$("rateEditorTitle").textContent='現在ボーダーを追加';$("rateObservationSaveBtn").textContent='この観測を保存';$("rateObservationCancelBtn").classList.add('hidden');setRateObservedNow();renderRateFileList();renderRatePointEditor();$("rateOcrStatus").textContent='ランキング画面専用の行単位読み取りです。保存前に結果を確認・修正できます。';if($("rateOcrPreview"))$("rateOcrPreview").innerHTML='<div class="note">解析後に表示します。</div>'}
 function editRateObservation(id){const o=rateObservations.find(x=>x.id===id);if(!o)return;editingRateObservationId=id;rateEditorPoints=(o.points||[]).map(x=>({...x}));rateEditorFiles=[];$("rateScreenshots").value='';$("rateSeasonName").value=o.season;$("rateObservedAt").value=o.observedAt;$("rateObservationMemo").value=o.memo||'';$("rateEditorTitle").textContent='観測データを編集';$("rateObservationSaveBtn").textContent='変更を保存';$("rateObservationCancelBtn").classList.remove('hidden');updateObservedAtLabel();renderRateFileList();renderRatePointEditor();document.getElementById('rate').scrollIntoView({behavior:'smooth',block:'start'})}
 function cancelRateObservationEdit(){resetRateObservationEditor()}
 function deleteRateObservation(id){if(!confirm('この観測データを削除しますか？'))return;rateObservations=rateObservations.filter(o=>o.id!==id);localStorage.setItem('cg_rate_observations',JSON.stringify(rateObservations));if(editingRateObservationId===id)resetRateObservationEditor();renderRateDashboard()}
-function rateSeries(target,season){return rateObservations.filter(o=>o.season===season).map(o=>{const est=inferBorder(o.points,target);return est?{time:new Date(o.observedAt).getTime(),at:o.observedAt,bp:est.bp,confidence:est.confidence,obs:o,est}:null}).filter(Boolean).sort((a,b)=>a.time-b.time)}
-function linearSlopePerHour(series){const a=series.slice(-5);if(a.length<2)return null;const t0=a[0].time,x=a.map(p=>(p.time-t0)/3600000),y=a.map(p=>p.bp),mx=x.reduce((s,v)=>s+v,0)/x.length,my=y.reduce((s,v)=>s+v,0)/y.length;let num=0,den=0;for(let i=0;i<x.length;i++){num+=(x[i]-mx)*(y[i]-my);den+=(x[i]-mx)**2}return den?num/den:null}
+function confidenceWeight(c){return c==="高"?1:c==="中"?.72:.42}
+function rateSeries(target,season){return rateObservations.filter(o=>o.season===season).map(o=>{const est=inferBorder(o.points,target);return est?{time:new Date(o.observedAt).getTime(),at:o.observedAt,bp:est.bp,confidence:est.confidence,weight:confidenceWeight(est.confidence),obs:o,est}:null}).filter(x=>x&&Number.isFinite(x.time)).sort((a,b)=>a.time-b.time)}
+function weightedSlope(series){if(series.length<2)return null;const t0=series[0].time,x=series.map(p=>(p.time-t0)/3600000),y=series.map(p=>p.bp),w=series.map(p=>p.weight||1),sw=w.reduce((a,b)=>a+b,0),mx=x.reduce((s,v,i)=>s+v*w[i],0)/sw,my=y.reduce((s,v,i)=>s+v*w[i],0)/sw;let num=0,den=0;for(let i=0;i<x.length;i++){num+=w[i]*(x[i]-mx)*(y[i]-my);den+=w[i]*(x[i]-mx)**2}return den?num/den:null}
+function windowSlope(series,hours){if(series.length<2)return null;const latest=series.at(-1).time,cut=latest-hours*3600000;let a=series.filter(p=>p.time>=cut);if(a.length<2){const before=[...series].reverse().find(p=>p.time<cut);if(before)a=[before,...a]}if(a.length<2)return null;const span=(a.at(-1).time-a[0].time)/3600000,slope=weightedSlope(a);return Number.isFinite(slope)?{hours,slope,span,count:a.length}:null}
+function multiWindowTrend(series){const cfg=[[1,.05],[3,.10],[6,.20],[12,.30],[24,.35]],stats=cfg.map(([h,b])=>{const x=windowSlope(series,h);if(!x)return null;const coverage=Math.min(1,x.span/h),samples=Math.min(1,(x.count-1)/3),weight=b*(.25+.75*coverage)*(.55+.45*samples);return {...x,weight}}).filter(Boolean);if(!stats.length)return {rate:null,stats:[],span:0};let sw=0,sr=0;for(const x of stats){sw+=x.weight;sr+=x.slope*x.weight}const span=(series.at(-1).time-series[0].time)/3600000;return {rate:sw?sr/sw:null,stats,span}}
 function previousDelta(series){if(series.length<2)return null;const a=series.at(-2),b=series.at(-1),h=(b.time-a.time)/3600000;if(h<=0)return null;return {delta:b.bp-a.bp,hours:h,perHour:(b.bp-a.bp)/h}}
 function checkpointForDate(d){
  const targetDays=[1,3,5];let best=null,bestKey='fri';for(let back=0;back<8;back++){const c=new Date(d);c.setDate(c.getDate()-back);c.setHours(20,0,0,0);if(targetDays.includes(c.getDay())&&c<=d){if(!best||c>best){best=c;bestKey=c.getDay()===1?'mon':c.getDay()===3?'wed':'fri'}}}return {date:best,key:bestKey};
@@ -661,28 +698,46 @@ function historicalForecast(currentBp,target,currentAt,endAt){
  let scale=1;if(end&&!Number.isNaN(end.getTime())&&cp.date){const total=(end-cp.date)/3600000,rem=(end-now)/3600000;if(total>0)scale=Math.max(0,Math.min(1.15,rem/total))}
  const rows=all.map(r=>({...r,delta:(r.finalBp-r.checkpointBp)*scale,distance:Math.abs(r.checkpointBp-currentBp)})).sort((a,b)=>a.distance-b.distance),near=rows.slice(0,Math.min(10,rows.length));let sw=0,sd=0;near.forEach((r,i)=>{const w=1/(r.distance+70)*(1+(near.length-i)*.02);sw+=w;sd+=r.delta*w});const deltas=near.map(r=>r.delta);return {pred:Math.round(currentBp+sd/sw),low:Math.round(currentBp+quantile(deltas,.25)),high:Math.round(currentBp+quantile(deltas,.75)),day:cp.key,scale,used:near.length};
 }
+function forecastBias(target){const rows=rateFinalResults.map(r=>{const a=Number(r[target===500?'final500':'final5000']),p=Number(r[target===500?'pred500':'pred5000']);return Number.isFinite(a)&&a>0&&Number.isFinite(p)&&p>0?a-p:null}).filter(Number.isFinite).slice(-8);if(!rows.length)return {bias:0,n:0,raw:0};const raw=quantile(rows,.5),strength=Math.min(.6,rows.length*.12);return {bias:Math.round(raw*strength),n:rows.length,raw:Math.round(raw)}}
 function formatHours(h){if(!Number.isFinite(h))return '-';if(h<0)return '終了済み';const d=Math.floor(h/24),r=Math.round(h-d*24);return d?`${d}日${r}時間`:`${r}時間`}
+function paceState(trend){if(!trend||!trend.stats.length)return {label:'データ不足',kind:'mid'};const short=trend.stats.find(x=>x.hours===3)||trend.stats.find(x=>x.hours===6),long=trend.stats.find(x=>x.hours===24)||trend.stats.find(x=>x.hours===12);if(!short||!long||short.span<1||long.span<3)return {label:'データ不足',kind:'mid'};const diff=short.slope-long.slope;if(diff>Math.max(2,Math.abs(long.slope)*.25))return {label:'終盤加速中',kind:'bad'};if(diff<-Math.max(2,Math.abs(long.slope)*.25))return {label:'伸びが鈍化',kind:'good'};return {label:'通常ペース',kind:'mid'}}
 function targetForecast(target,season){
- const series=rateSeries(target,season);if(!series.length)return null;const latest=series.at(-1),end=rateSeason.endAt?new Date(rateSeason.endAt):null,remaining=end&&!Number.isNaN(end.getTime())?(end-latest.time)/3600000:null,slope=linearSlopePerHour(series),hist=remaining==null?null:historicalForecast(latest.bp,target,latest.at,rateSeason.endAt);
- let pred=null,low=null,high=null,trendPred=null;if(remaining!=null&&remaining>=0&&slope!=null){trendPred=Math.round(latest.bp+slope*remaining)}
- if(hist&&trendPred!=null){pred=Math.round(trendPred*.6+hist.pred*.4);low=Math.round(Math.min(hist.low,pred-Math.max(15,Math.abs(trendPred-hist.pred)*.35)));high=Math.round(Math.max(hist.high,pred+Math.max(15,Math.abs(trendPred-hist.pred)*.35)))}else if(hist){pred=hist.pred;low=hist.low;high=hist.high}else if(trendPred!=null){pred=trendPred;low=pred-40;high=pred+40}
- return {target,series,latest,remaining,slope,hist,trendPred,pred,low,high,delta:previousDelta(series)};
+ const series=rateSeries(target,season);if(!series.length)return null;const latest=series.at(-1),end=rateSeason.endAt?new Date(rateSeason.endAt):null,remaining=end&&!Number.isNaN(end.getTime())?(end-latest.time)/3600000:null,trend=multiWindowTrend(series),hist=remaining==null?null:historicalForecast(latest.bp,target,latest.at,rateSeason.endAt),bias=forecastBias(target);
+ let pred=null,low=null,high=null,trendPred=null,trendWeight=0,effectiveRate=null;const latestConf=confidenceWeight(latest.confidence);
+ if(remaining!=null&&remaining>=0&&trend.rate!=null){trendPred=Math.round(latest.bp+trend.rate*remaining)}
+ if(hist&&remaining!=null&&remaining>=0){const histRate=(hist.pred-latest.bp)/Math.max(1,remaining);if(trend.rate!=null){trendWeight=Math.min(.45,(.08+Math.min(1,trend.span/24)*.37)*latestConf);const capped=Math.max(histRate-10,Math.min(histRate+10,trend.rate));effectiveRate=histRate*(1-trendWeight)+capped*trendWeight;pred=Math.round(latest.bp+effectiveRate*remaining+bias.bias)}else pred=Math.round(hist.pred+bias.bias);const uncertainty=Math.max(18,Math.round((1-trendWeight)*35+Math.abs((trend.rate??histRate)-histRate)*Math.max(1,remaining)*.18));low=Math.round(Math.min(hist.low+bias.bias,pred-uncertainty));high=Math.round(Math.max(hist.high+bias.bias,pred+uncertainty))}
+ else if(trendPred!=null){pred=Math.round(trendPred+bias.bias);low=pred-50;high=pred+50}
+ return {target,series,latest,remaining,slope:trend.rate,trend,hist,trendPred,trendWeight,effectiveRate,pred,low,high,delta:previousDelta(series),bias,pace:paceState(trend)};
 }
 function buildRateTrendSvg(season){
  const a=rateSeries(500,season),b=rateSeries(5000,season),all=[...a,...b];if(!all.length)return '<div class="note">観測データなし</div>';const W=760,H=280,pad=42,minT=Math.min(...all.map(x=>x.time)),maxT=Math.max(...all.map(x=>x.time)),minY=Math.min(...all.map(x=>x.bp))-20,maxY=Math.max(...all.map(x=>x.bp))+20,sx=t=>pad+(t-minT)/Math.max(1,maxT-minT)*(W-2*pad),sy=y=>H-pad-(y-minY)/Math.max(1,maxY-minY)*(H-2*pad),poly=x=>x.map(p=>`${sx(p.time)},${sy(p.bp)}`).join(' ');
  return `<svg viewBox="0 0 ${W} ${H}" aria-label="ボーダー推移"><line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#566070"/><line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#566070"/>${a.length?`<polyline fill="none" stroke="#e7bd52" stroke-width="4" points="${poly(a)}"/>${a.map(p=>`<circle cx="${sx(p.time)}" cy="${sy(p.bp)}" r="4" fill="#e7bd52"/>`).join('')}`:''}${b.length?`<polyline fill="none" stroke="#8fc8ff" stroke-width="4" points="${poly(b)}"/>${b.map(p=>`<circle cx="${sx(p.time)}" cy="${sy(p.bp)}" r="4" fill="#8fc8ff"/>`).join('')}`:''}<text x="${pad}" y="22" fill="#9fa7b7" font-size="12">${Math.round(maxY)}pt</text><text x="${pad}" y="${H-10}" fill="#9fa7b7" font-size="12">${jpDateTime(new Date(minT))}</text><text x="${W-pad}" y="${H-10}" fill="#9fa7b7" font-size="12" text-anchor="end">${jpDateTime(new Date(maxT))}</text></svg>`;
 }
+function renderRatePaceAnalysis(season){
+ const el=$("ratePaceAnalysis");if(!el)return;const targets=[500,5000],blocks=targets.map(target=>{const f=targetForecast(target,season);if(!f||!f.trend||!f.trend.stats.length)return `<div class="detailCard"><strong>${target}位</strong><div class="note">伸び率を出せるだけの観測がありません。</div></div>`;const by=new Map(f.trend.stats.map(x=>[x.hours,x]));const cells=[1,3,6,12,24].map(h=>{const x=by.get(h);return `<div class="pace-cell"><div class="muted">${h}時間</div><div class="v">${x?`${x.slope>=0?'+':''}${x.slope.toFixed(1)}`:'-'}</div><div class="muted">pt/時${x?`<br>${x.span.toFixed(1)}h・${x.count}点`:''}</div></div>`}).join('');return `<div class="detailCard"><div class="entry-title"><strong>${target}位</strong><span class="${f.pace.kind==='bad'?'bad':f.pace.kind==='good'?'good':'gold'}">${f.pace.label}</span></div><div class="pace-grid">${cells}</div><div class="note" style="margin-top:8px">予想に使う実測ペース：${f.slope==null?'-':`${f.slope>=0?'+':''}${f.slope.toFixed(1)}pt/時`}。短時間データほど重みを小さくしています。</div></div>`}).join('');el.innerHTML=blocks;
+}
+function renderRateAccuracy(){
+ const el=$("rateAccuracySummary");if(!el)return;if(!rateFinalResults.length){el.innerHTML='<div class="note">最終結果の記録はまだありません。</div>';return}const err=(t)=>rateFinalResults.map(r=>{const a=Number(r[t===500?'final500':'final5000']),p=Number(r[t===500?'pred500':'pred5000']);return Number.isFinite(a)&&a>0&&Number.isFinite(p)&&p>0?Math.abs(a-p):null}).filter(Number.isFinite),e500=err(500),e5000=err(5000),mae=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null,b500=forecastBias(500),b5000=forecastBias(5000);el.innerHTML=`<div class="rate-preview"><div class="rate-estimate"><div class="muted">500位 予想誤差</div><div class="big">${mae(e500)==null?'-':mae(e500)+'pt'}</div><div class="note">平均絶対誤差 / ${e500.length}シーズン<br>次回補正 ${b500.bias>=0?'+':''}${b500.bias}pt</div></div><div class="rate-estimate"><div class="muted">5000位 予想誤差</div><div class="big">${mae(e5000)==null?'-':mae(e5000)+'pt'}</div><div class="note">平均絶対誤差 / ${e5000.length}シーズン<br>次回補正 ${b5000.bias>=0?'+':''}${b5000.bias}pt</div></div></div>`;
+}
+function renderRateSeasonArchive(){
+ const el=$("rateSeasonArchive");if(!el)return;const names=[...new Set([...rateObservations.map(o=>o.season),...rateFinalResults.map(r=>r.season)])].filter(Boolean).sort((a,b)=>b.localeCompare(a,'ja'));if(!names.length){el.innerHTML='<div class="note">シーズン履歴なし</div>';return}el.innerHTML=names.map(name=>{const obs=rateObservations.filter(o=>o.season===name).sort((a,b)=>new Date(a.observedAt)-new Date(b.observedAt)),fin=rateFinalResults.find(r=>r.season===name),last=obs.at(-1),a=last?inferBorder(last.points,500):null,b=last?inferBorder(last.points,5000):null;return `<div class="archive-row"><div class="entry-title"><span>${esc(name)}</span><span>${obs.length}回</span></div><div class="note">最終観測 500位 ${a?a.bp+'pt':'-'} / 5000位 ${b?b.bp+'pt':'-'}${fin?`<br>確定 500位 ${fin.final500||'-'}pt / 5000位 ${fin.final5000||'-'}pt`:'<br>最終結果 未登録'}</div></div>`}).join('');
+}
 function renderRateDashboard(){
- if(!$("rateDashboard"))return;const season=$("rateSeasonName").value.trim()||rateSeason.name||'',margin=Math.max(0,Number($("rateMargin").value)||rateSeason.margin||0),f500=targetForecast(500,season),f5000=targetForecast(5000,season),end=rateSeason.endAt||$("rateSeasonEnd").value,selfBp=Number($("rateSelfBp").value||rateSeason.selfBp||0);
- if(!season){$("rateDashboard").innerHTML='<div class="note">シーズン名を設定してください。</div>';$("rateTrendChart").innerHTML='<div class="note">観測データなし</div>';renderRateObservationHistory();return}
- const card=(f,target)=>{if(!f)return `<div class="rate-estimate"><div class="muted">${target}位</div><div>観測なし</div></div>`;const d=f.delta,safe=f.pred==null?null:f.pred+margin,need=selfBp&&safe!=null?safe-selfBp:null;return `<div class="rate-estimate"><div class="muted">${f.target}位 現在推定</div><div class="big">${f.latest.bp.toLocaleString()}pt</div><div>${bpToRate(f.latest.bp)} / <span class="${confClass(f.latest.confidence)}">信頼度 ${f.latest.confidence}</span></div>${d?`<div class="note">前回から ${d.delta>=0?'+':''}${d.delta}pt / ${d.hours.toFixed(1)}時間（${d.perHour>=0?'+':''}${d.perHour.toFixed(1)}pt/時）</div>`:''}${f.pred!=null?`<hr style="border:0;border-top:1px solid var(--line);margin:10px 0"><div class="muted">最終予想</div><div class="big gold">${f.pred.toLocaleString()}pt</div><div class="note">予想範囲 ${f.low.toLocaleString()}～${f.high.toLocaleString()}pt<br>残り ${formatHours(f.remaining)}${f.slope!=null?` / 直近傾向 ${f.slope>=0?'+':''}${f.slope.toFixed(1)}pt/時`:''}</div><div style="margin-top:8px"><span class="pill">安全目標 ${safe.toLocaleString()}pt</span>${need!=null?` <span class="pill ${need<=0?'good':'bad'}">${need<=0?`+${Math.abs(need)}pt余裕`:`あと${need}pt`}</span>`:''}</div>`:`<div class="note" style="margin-top:8px">終了日時を設定すると最終予想を表示します。</div>`}</div>`};
- $("rateDashboard").innerHTML=`<div class="rate-preview">${card(f500,500)}${card(f5000,5000)}</div>${end?`<p class="note">シーズン終了：${jpDateTime(end)}。最終予想は直近の実測推移と、過去の月・水・金20時→最終の伸びを残り時間に合わせて組み合わせた参考値です。</p>`:''}`;
- $("rateTrendChart").innerHTML=buildRateTrendSvg(season);renderRateObservationHistory();
+ if(!$("rateDashboard"))return;const season=$("rateSeasonName").value.trim()||rateSeason.name||'',margin=Math.max(0,Number($("rateMargin").value)||rateSeason.margin||0),f500=targetForecast(500,season),f5000=targetForecast(5000,season),end=rateSeason.endAt||$("rateSeasonEnd").value,selfBp=Number($("rateSelfBp").value||rateSeason.selfBp||0),winGain=Math.max(1,Number($("rateWinGain").value||rateSeason.winGain||25));
+ if(!season){$("rateDashboard").innerHTML='<div class="note">シーズン名を設定してください。</div>';$("rateTrendChart").innerHTML='<div class="note">観測データなし</div>';renderRateObservationHistory();renderRatePaceAnalysis('');renderRateAccuracy();renderRateSeasonArchive();return}
+ const card=(f,target)=>{if(!f)return `<div class="rate-estimate"><div class="muted">${target}位</div><div>観測なし</div></div>`;const d=f.delta,safe=f.pred==null?null:f.pred+margin,currentDiff=selfBp?selfBp-f.latest.bp:null,need=selfBp&&safe!=null?safe-selfBp:null,wins=need>0?Math.ceil(need/winGain):0,biasText=f.bias&&f.bias.n?` / 誤差補正 ${f.bias.bias>=0?'+':''}${f.bias.bias}pt`:'';return `<div class="rate-estimate"><div class="muted">${f.target}位 現在推定</div><div class="big">${f.latest.bp.toLocaleString()}pt</div><div>${bpToRate(f.latest.bp)} / <span class="${confClass(f.latest.confidence)}">信頼度 ${f.latest.confidence}</span></div>${currentDiff!=null?`<div class="note">自分との差 ${currentDiff>=0?'+':''}${currentDiff}pt</div>`:''}${d?`<div class="note">前回から ${d.delta>=0?'+':''}${d.delta}pt / ${d.hours.toFixed(1)}時間（${d.perHour>=0?'+':''}${d.perHour.toFixed(1)}pt/時）</div>`:''}${f.pred!=null?`<hr style="border:0;border-top:1px solid var(--line);margin:10px 0"><div class="muted">最終予想</div><div class="big gold">${f.pred.toLocaleString()}pt</div><div class="note">予想範囲 ${f.low.toLocaleString()}～${f.high.toLocaleString()}pt<br>残り ${formatHours(f.remaining)} / ${f.pace.label}${f.slope!=null?`<br>複数時間帯の実測傾向 ${f.slope>=0?'+':''}${f.slope.toFixed(1)}pt/時 / 実測重み ${Math.round((f.trendWeight||0)*100)}%${biasText}`:''}</div><div style="margin-top:8px"><span class="pill">安全目標 ${safe.toLocaleString()}pt</span>${need!=null?` <span class="pill ${need<=0?'good':'bad'}">${need<=0?`+${Math.abs(need)}pt余裕`:`あと${need}pt`}</span>`:''}${need>0?` <span class="pill">約${wins}勝分</span>`:''}</div>`:`<div class="note" style="margin-top:8px">終了日時を設定すると最終予想を表示します。</div>`}</div>`};
+ $("rateDashboard").innerHTML=`<div class="rate-preview">${card(f500,500)}${card(f5000,5000)}</div>${end?`<p class="note">シーズン終了：${jpDateTime(end)}。短時間の伸びをそのまま残り時間へ延長せず、1・3・6・12・24時間の観測、推定信頼度、過去シーズン、過去の予想誤差を組み合わせています。</p>`:''}`;
+ $("rateTrendChart").innerHTML=buildRateTrendSvg(season);renderRateObservationHistory();renderRatePaceAnalysis(season);renderRateAccuracy();renderRateSeasonArchive();
+ const fin=rateFinalResults.find(r=>r.season===season);if(fin){$("rateFinal500").value=fin.final500||'';$("rateFinal5000").value=fin.final5000||''}
 }
 function renderRateObservationHistory(){
  if(!$("rateObservationHistory"))return;const season=$("rateSeasonName").value.trim()||rateSeason.name||'',list=rateObservations.filter(o=>!season||o.season===season).sort((a,b)=>new Date(b.observedAt)-new Date(a.observedAt));
  $("rateObservationHistory").innerHTML=list.length?list.map(o=>{const a=inferBorder(o.points,500),b=inferBorder(o.points,5000);return `<div class="entry"><div class="entry-title"><span>${jpDateTime(o.observedAt)}</span><span>${o.points.length}件</span></div><div class="note">500位：${a?`${a.bp}pt（${a.confidence}）`:'-'} / 5000位：${b?`${b.bp}pt（${b.confidence}）`:'-'}${o.memo?`<br>${esc(o.memo)}`:''}</div><div class="actions"><button onclick="editRateObservation(${o.id})">編集</button><button class="danger" onclick="deleteRateObservation(${o.id})">削除</button></div></div>`}).join(''):'<div class="note">観測データなし</div>';
 }
+function parseFlexibleBp(v){const s=String(v||'').trim();if(!s)return null;const rate=s.match(/S\s*(\d+)\s*[/,]\s*(\d+)/i);if(rate)return rankPtToBp(Number(rate[1]),Number(rate[2]));const n=Number(s.replace(/,/g,''));return Number.isFinite(n)&&n>0?Math.round(n):null}
+function lastForecastSnapshot(season,target){const key=String(target);const rows=rateObservations.filter(o=>o.season===season&&o.forecasts&&Number.isFinite(Number(o.forecasts[key]))).sort((a,b)=>new Date(a.observedAt)-new Date(b.observedAt));return rows.length?Number(rows.at(-1).forecasts[key]):null}
+function saveRateFinalResult(){const season=$("rateSeasonName").value.trim()||rateSeason.name||'';if(!season){alert('シーズン名を入力してください');return}const final500=parseFlexibleBp($("rateFinal500").value),final5000=parseFlexibleBp($("rateFinal5000").value);if(final500==null&&final5000==null){alert('500位か5000位の最終ptを入力してください');return}const old=rateFinalResults.find(r=>r.season===season)||{},item={...old,id:old.id||Date.now(),season,final500:final500??old.final500??null,final5000:final5000??old.final5000??null,pred500:old.pred500??lastForecastSnapshot(season,500),pred5000:old.pred5000??lastForecastSnapshot(season,5000),savedAt:new Date().toISOString()};rateFinalResults=rateFinalResults.filter(r=>r.season!==season);rateFinalResults.push(item);localStorage.setItem('cg_rate_final_results',JSON.stringify(rateFinalResults));renderRateDashboard();alert('最終結果を保存しました')}
+
 function addRateHistory(){
  const season=$("histSeason").value.trim(),target=+$("histTarget").value,day=$("histDay").value,cr=+$("histCheckpointRank").value,cp=+$("histCheckpointPt").value,fr=+$("histFinalRank").value,fp=+$("histFinalPt").value;
  if(!season||!Number.isFinite(cp)||!Number.isFinite(fp)){alert('シーズン名・途中ボーダー・最終ボーダーを入力してください');return}
@@ -698,7 +753,7 @@ function renderRateHistory(){
 
 function saveSettings(){settings={ur:+$("rateUR").value,sr:+$("rateSR").value,cur:+$("rateCUR").value,bm:+$("bmPer60").value};localStorage.setItem("cg_settings",JSON.stringify(settings));render();alert("保存しました")}
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings,rateCustom,ratePrefs,rateObservations,rateSeason},null,2),"application/json")}
+function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings,rateCustom,ratePrefs,rateObservations,rateSeason,rateFinalResults},null,2),"application/json")}
 function exportCSV(){
  const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,exchange_ur,screenshot_saved,memo\n";
  const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.exchangeUR,e.screenshotSaved,e.memo].map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -706,7 +761,7 @@ function exportCSV(){
 }
 function importJSON(ev){
  const f=ev.target.files[0];if(!f)return;const r=new FileReader();
- r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;rateCustom=x.rateCustom||rateCustom;ratePrefs=x.ratePrefs||ratePrefs;rateObservations=x.rateObservations||rateObservations;rateSeason=x.rateSeason||rateSeason;localStorage.setItem("cg_rate_history_custom",JSON.stringify(rateCustom));localStorage.setItem("cg_rate_prefs",JSON.stringify(ratePrefs));localStorage.setItem("cg_rate_observations",JSON.stringify(rateObservations));localStorage.setItem("cg_rate_season",JSON.stringify(rateSeason));localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
+ r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;rateCustom=x.rateCustom||rateCustom;ratePrefs=x.ratePrefs||ratePrefs;rateObservations=x.rateObservations||rateObservations;rateSeason=x.rateSeason||rateSeason;rateFinalResults=x.rateFinalResults||rateFinalResults;localStorage.setItem("cg_rate_final_results",JSON.stringify(rateFinalResults));localStorage.setItem("cg_rate_history_custom",JSON.stringify(rateCustom));localStorage.setItem("cg_rate_prefs",JSON.stringify(ratePrefs));localStorage.setItem("cg_rate_observations",JSON.stringify(rateObservations));localStorage.setItem("cg_rate_season",JSON.stringify(rateSeason));localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
 }
 render();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
