@@ -16,7 +16,7 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
 .wrap{max-width:1000px;margin:auto;padding:14px 12px 100px}
 h1{font-size:23px;margin:8px 0 14px} h2,h3{margin:0 0 12px}
-.tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;position:sticky;top:0;background:rgba(19,21,27,.95);padding:8px 0;backdrop-filter:blur(10px);z-index:10}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;position:sticky;top:0;background:rgba(19,21,27,.95);padding:8px 0;backdrop-filter:blur(10px);z-index:10}
 button{border:0;border-radius:11px;padding:11px;background:#303646;color:white;font-weight:700}
 .tabs button{padding:10px 2px;font-size:11px}.tabs button.active{background:var(--gold);color:#111}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:11px 0}
@@ -37,14 +37,8 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 5px;b
 .detailCard{background:#171a21;border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0}
 .reportSel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;border:1px solid var(--line)}
-.shotGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
-.shotGrid img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
-.shotPreview{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
-.shotPreview img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:99;padding:16px}
-.modal.open{display:flex}.modal img{max-width:100%;max-height:88vh;border-radius:10px}.modal button{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:14px}
 .version{font-size:11px;color:#6f7787;text-align:center;margin-top:18px}
-@media(min-width:720px){.grid{grid-template-columns:repeat(6,1fr)}}
+@media(min-width:720px){.grid{grid-template-columns:repeat(6,1fr)}.tabs{grid-template-columns:repeat(8,1fr)}}
 </style>
 </head>
 <body>
@@ -57,7 +51,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
 <button data-tab="analysis">分析</button>
 <button data-tab="money">課金</button>
 <button data-tab="report">レポート</button>
-<button data-tab="history">履歴</button>
+<button data-tab="rate">レート予想</button>
 <button data-tab="settings">設定</button>
 </div>
 
@@ -84,10 +78,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
   <label>かんたん入力（任意）</label><input id="quickInput" placeholder="例：SR 11:18 / UR 4:0">
   <button class="secondary" style="width:100%;margin-top:7px" onclick="parseQuick()">反映</button>
   <label>交換で入手したコラボUR（排出率には含めない）</label><input id="exchangeUR" type="number" min="0" value="0">
-  <label>ガチャ結果スクショ（複数選択可）</label>
-  <input id="screenshotFiles" type="file" accept="image/*" multiple onchange="previewScreenshots(event)">
-  <div id="shotPreview" class="shotPreview"></div>
-  <p class="note">画像は自動で縮小・圧縮して、この端末内に保存します。</p>
+  <label><input id="screenshotSaved" type="checkbox">スクショ保存済み</label>
   <label>メモ</label><textarea id="memo" rows="2" placeholder="任意"></textarea>
   <button class="primary" style="width:100%;margin-top:14px" onclick="addEntry()">保存</button>
  </div>
@@ -131,18 +122,35 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
-
-<section id="history" class="hidden">
+<section id="rate" class="hidden">
  <div class="card">
-  <h3>ガチャ履歴</h3>
-  <div id="historyList"></div>
+  <h3>シーズン最終ボーダー予想</h3>
+  <div class="row">
+   <div><label>予想する順位</label><select id="rateTarget"><option value="500">500位（銀）</option><option value="5000">5000位（銅）</option></select></div>
+   <div><label>現在値を確認した曜日</label><select id="rateDay"><option value="fri">金曜 20時</option><option value="wed">水曜 20時</option><option value="mon">月曜 20時</option></select></div>
+  </div>
+  <label>現在のボーダー</label>
+  <div class="row"><select id="rateBorderRank"></select><input id="rateBorderPt" type="number" min="0" step="1" value="25" placeholder="pt"></div>
+  <label>自分の現在レート（任意）</label>
+  <div class="row"><select id="rateSelfRank"><option value="">入力しない</option></select><input id="rateSelfPt" type="number" min="0" step="1" placeholder="pt"></div>
+  <label>安全マージン</label><input id="rateMargin" type="number" min="0" step="10" value="50">
+  <button class="primary" style="width:100%;margin-top:14px" onclick="predictRate()">最終ボーダーを予想</button>
+  <p class="note">過去の同じ曜日から最終日までの伸びを比較し、現在値に近いシーズンを重めにして予想します。内蔵データはcmnsの5pt刻みを含むため、1pt単位の確定値ではありません。</p>
  </div>
+ <div class="card"><h3>予想結果</h3><div id="rateResult"><div class="note">現在のボーダーを入力して「最終ボーダーを予想」を押してください。</div></div></div>
+ <div class="card"><h3>似ている過去シーズン</h3><div id="rateSimilar"><div class="note">予想すると表示されます。</div></div></div>
+ <details class="card">
+  <summary style="font-weight:800;cursor:pointer">正確な過去データを追加</summary>
+  <p class="note">cmnsの丸め値ではなく、Appliv Gamesなどで1pt単位の値が確認できた場合に追加できます。同じシーズン・順位・曜日は追加データを優先します。</p>
+  <label>シーズン名</label><input id="histSeason" placeholder="例：2026年3月 勇者">
+  <div class="row"><div><label>順位</label><select id="histTarget"><option value="500">500位</option><option value="5000">5000位</option></select></div><div><label>曜日</label><select id="histDay"><option value="fri">金曜</option><option value="wed">水曜</option><option value="mon">月曜</option></select></div></div>
+  <label>その曜日のボーダー</label><div class="row"><select id="histCheckpointRank"></select><input id="histCheckpointPt" type="number" min="0" step="1" placeholder="pt"></div>
+  <label>最終ボーダー</label><div class="row"><select id="histFinalRank"></select><input id="histFinalPt" type="number" min="0" step="1" placeholder="pt"></div>
+  <label><input id="histExact" type="checkbox" checked>1pt単位の正確な値</label>
+  <button class="secondary" style="width:100%;margin-top:12px" onclick="addRateHistory()">過去データを追加</button>
+  <div id="rateHistoryList" style="margin-top:12px"></div>
+ </details>
 </section>
-
-<div id="imageModal" class="modal" onclick="closeImageModal()">
- <button onclick="closeImageModal()">閉じる</button>
- <img id="modalImage" alt="ガチャ結果スクショ">
-</div>
 
 <section id="settings" class="hidden">
  <div class="card">
@@ -158,7 +166,7 @@ svg{width:100%;height:auto;display:block;background:#13161d;border-radius:12px;b
  </div>
 </section>
 
-<div class="version">v3.1</div>
+<div class="version">v4.0</div>
 </div>
 
 <script>
@@ -175,98 +183,55 @@ const DEFAULT_ENTRIES=[
 let entries=JSON.parse(localStorage.getItem("cg_entries")||"null");
 if(!entries){entries=DEFAULT_ENTRIES;localStorage.setItem("cg_entries",JSON.stringify(entries))}
 entries=entries.map(e=>({...e,exchangeUR:Number(e.exchangeUR||0),screenshotSaved:Boolean(e.screenshotSaved)}));
-let pendingScreenshots=[];
 let purchases=JSON.parse(localStorage.getItem("cg_purchases")||"[]");
 let settings=JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"cur":1,"bm":5000}');
+let rateCustom=JSON.parse(localStorage.getItem("cg_rate_history_custom")||"[]");
+let ratePrefs=JSON.parse(localStorage.getItem("cg_rate_prefs")||'{}');
+const RATE_SEED=[
+ {season:"2026年8月 イグニス",target:500,mon:"S5/030",wed:"S5/275",fri:"S6/035",final:"S6/460"},{season:"2026年8月 イグニス",target:5000,mon:"S4/010",wed:"S4/160",fri:"S4/315",final:"S5/120"},
+ {season:"2026年7月 きらら",target:500,mon:"S5/020",wed:"S5/220",fri:"S5/460",final:"S6/405"},{season:"2026年7月 きらら",target:5000,mon:"S4/005",wed:"S4/135",fri:"S4/270",final:"S5/095"},
+ {season:"2026年5月 ペルリニエ",target:500,mon:"S5/185",wed:"S5/480",fri:"S6/180",final:"S7/175"},{season:"2026年5月 ペルリニエ",target:5000,mon:"S4/110",wed:"S4/290",fri:"S5/000",final:"S5/325"},
+ {season:"2026年4月 マリア",target:500,mon:"S5/005",wed:"S5/225",fri:"S5/495",final:"S6/410"},{season:"2026年4月 マリア",target:5000,mon:"S3/470",wed:"S4/115",fri:"S4/245",final:"S5/060"},
+ {season:"2026年3月 勇者",target:500,mon:"S5/015",wed:"S5/250",fri:"S6/015",final:"S6/460"},{season:"2026年3月 勇者",target:5000,mon:"S4/000",wed:"S4/135",fri:"S4/295",final:"S5/150"},
+ {season:"2026年2月 零夜",target:500,mon:"S5/035",wed:"S5/300",fri:"S6/050",final:"S6/495"},{season:"2026年2月 零夜",target:5000,mon:"S4/020",wed:"S4/175",fri:"S4/310",final:"S5/145"},
+ {season:"2026年1月 チーちゃん",target:500,mon:"S5/165",wed:"S5/405",fri:"S6/125",final:"S7/060"},{season:"2026年1月 チーちゃん",target:5000,mon:"S4/115",wed:"S4/265",fri:"S4/420",final:"S5/230"},
+ {season:"2025年11月 テスラ",target:500,mon:"S5/005",wed:"S5/200",fri:"S5/420",final:"S6/350"},{season:"2025年11月 テスラ",target:5000,mon:"S3/460",wed:"S4/105",fri:"S4/240",final:"S5/065"},
+ {season:"2025年10月 GBG",target:500,mon:"S5/055",wed:"S5/275",fri:"S6/025",final:"S6/460"},{season:"2025年10月 GBG",target:5000,mon:"S4/025",wed:"S4/160",fri:"S4/300",final:"S5/100"},
+ {season:"2025年9月 みりぽゆ",target:500,mon:"S5/045",wed:"S5/270",fri:"S6/035",final:"S7/030"},{season:"2025年9月 みりぽゆ",target:5000,mon:"S4/025",wed:"S4/170",fri:"S4/330",final:"S5/200"},
+ {season:"2025年8月 まとい",target:500,mon:"S5/130",wed:"S5/415",fri:"S6/145",final:"S7/110"},{season:"2025年8月 まとい",target:5000,mon:"S4/115",wed:"S4/305",fri:"S5/005",final:"S5/300"},
+ {season:"2025年7月 コラプス",target:500,mon:"S5/010",wed:"S5/240",fri:"S6/000",final:"S6/430"},{season:"2025年7月 コラプス",target:5000,mon:"S4/025",wed:"S4/175",fri:"S4/330",final:"S5/165"},
+ {season:"2025年5月 うら",target:500,mon:"S5/105",wed:"S5/345",fri:"S6/105",final:"S7/105"},{season:"2025年5月 うら",target:5000,mon:"S4/095",wed:"S4/260",fri:"S4/440",final:"S5/280"},
+ {season:"2025年4月 サーティーン",target:500,mon:"S5/025",wed:"S5/260",fri:"S6/010",final:"S6/425"},{season:"2025年4月 サーティーン",target:5000,mon:"S4/035",wed:"S4/190",fri:"S4/335",final:"S5/175"},
+ {season:"2025年3月 甘色",target:500,mon:"S5/105",wed:"S5/375",fri:"S6/135",final:"S7/105"},{season:"2025年3月 甘色",target:5000,mon:"S4/075",wed:"S4/250",fri:"S4/425",final:"S5/270"},
+ {season:"2025年2月 ルルカ",target:500,mon:"S5/130",wed:"S5/405",fri:"S6/135",final:"S7/120"},{season:"2025年2月 ルルカ",target:5000,mon:"S4/100",wed:"S4/280",fri:"S4/475",final:"S5/300"},
+ {season:"2025年1月 アミスター",target:500,mon:"S5/190",wed:"S5/410",fri:"S6/140",final:"S7/060"},{season:"2025年1月 アミスター",target:5000,mon:"S4/155",wed:"S4/310",fri:"S5/000",final:"S5/285"},
+ {season:"2024年11月 トマス",target:500,mon:"S5/025",wed:"S5/260",fri:"S6/030",final:"S6/450"},{season:"2024年11月 トマス",target:5000,mon:"S4/030",wed:"S4/185",fri:"S4/330",final:"S5/155"},
+ {season:"2024年10月 某",target:500,mon:"S5/045",wed:"S5/270",fri:"S6/010",final:"S6/445"},{season:"2024年10月 某",target:5000,mon:"S4/035",wed:"S4/180",fri:"S4/325",final:"S5/150"},
+ {season:"2024年8月 ぶれどら",target:500,mon:"S5/145",wed:"S5/430",fri:"S6/190",final:"S7/130"},{season:"2024年8月 ぶれどら",target:5000,mon:"S4/075",wed:"S4/245",fri:"S4/420",final:"S5/230"},
+ {season:"2024年7月 ジャスティス",target:500,mon:"S5/025",wed:"S5/245",fri:"S6/000",final:"S6/355"},{season:"2024年7月 ジャスティス",target:5000,mon:"S4/020",wed:"S4/160",fri:"S4/295",final:"S5/065"},
+ {season:"2024年6月 おみグス",target:500,mon:"S5/020",wed:"S5/250",fri:"S6/010",final:"S6/465"},{season:"2024年6月 おみグス",target:5000,mon:"S4/015",wed:"S4/155",fri:"S4/300",final:"S5/130"},
+ {season:"2024年5月 ルチ",target:500,mon:"S5/020",wed:"S5/240",fri:"S6/005",final:"S6/405"},{season:"2024年5月 ルチ",target:5000,mon:"S4/010",wed:"S4/140",fri:"S4/275",final:"S5/095"},
+ {season:"2024年4月 アル",target:500,mon:"S5/035",wed:"S5/275",fri:"S6/010",final:"S6/415"},{season:"2024年4月 アル",target:5000,mon:"S4/030",wed:"S4/170",fri:"S4/305",final:"S5/145"},
+ {season:"2024年3月 ステリア",target:500,mon:"S5/100",wed:"S5/345",fri:"S6/090",final:"S7/060"},{season:"2024年3月 ステリア",target:5000,mon:"S4/070",wed:"S4/245",fri:"S4/405",final:"S5/235"},
+ {season:"2024年2月 ポロロッチョ",target:500,mon:"S5/090",wed:"S5/325",fri:"S6/055",final:"S7/015"},{season:"2024年2月 ポロロッチョ",target:5000,mon:"S4/065",wed:"S4/220",fri:"S4/370",final:"S5/170"},
+ {season:"2024年1月 コクリコ",target:500,mon:"S5/160",wed:"S5/400",fri:"S6/130",final:"S7/085"},{season:"2024年1月 コクリコ",target:5000,mon:"S4/130",wed:"S4/290",fri:"S4/475",final:"S5/290"}
+];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 const pct=(a,b)=>b?((a/b)*100).toFixed(2):"0.00";
 $("rateUR").value=settings.ur;$("rateSR").value=settings.sr;$("rateCUR").value=settings.cur;$("bmPer60").value=settings.bm;
 const today=new Date().toLocaleDateString("sv-SE");$("date").value=today;$("purchaseDate").value=today;
+const rankOptions=Array.from({length:9},(_,i)=>`<option value="${i+1}">S${i+1}</option>`).join("");
+["rateBorderRank","histCheckpointRank","histFinalRank"].forEach(id=>$(id).innerHTML=rankOptions);
+$("rateSelfRank").innerHTML='<option value="">入力しない</option>'+rankOptions;
+$("rateBorderRank").value=ratePrefs.borderRank||6;$("rateBorderPt").value=ratePrefs.borderPt??25;
+$("rateTarget").value=ratePrefs.target||500;$("rateDay").value=ratePrefs.day||"fri";$("rateMargin").value=ratePrefs.margin??50;
+if(ratePrefs.selfRank){$("rateSelfRank").value=ratePrefs.selfRank;$("rateSelfPt").value=ratePrefs.selfPt??0}
 
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
  document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
  document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden");render();
 });
-
-
-function openImageDB(){
- return new Promise((resolve,reject)=>{
-  const req=indexedDB.open("compass_gacha_images",1);
-  req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains("shots"))db.createObjectStore("shots",{keyPath:"id"})};
-  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
- });
-}
-async function saveShot(entryId,blob){
- const db=await openImageDB();
- return new Promise((resolve,reject)=>{
-  const tx=db.transaction("shots","readwrite");
-  tx.objectStore("shots").put({id:entryId+"_"+Date.now()+"_"+Math.random().toString(36).slice(2),entryId,blob});
-  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
- });
-}
-async function getShots(entryId){
- const db=await openImageDB();
- return new Promise((resolve,reject)=>{
-  const req=db.transaction("shots","readonly").objectStore("shots").getAll();
-  req.onsuccess=()=>resolve(req.result.filter(x=>String(x.entryId)===String(entryId)));
-  req.onerror=()=>reject(req.error);
- });
-}
-async function deleteShot(id){
- const db=await openImageDB();
- return new Promise((resolve,reject)=>{
-  const tx=db.transaction("shots","readwrite");tx.objectStore("shots").delete(id);
-  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
- });
-}
-async function deleteShotsForEntry(entryId){
- const shots=await getShots(entryId);for(const s of shots)await deleteShot(s.id);
-}
-async function compressImage(file){
- const bitmap=await createImageBitmap(file);
- const max=1400,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
- const c=document.createElement("canvas");c.width=Math.round(bitmap.width*scale);c.height=Math.round(bitmap.height*scale);
- c.getContext("2d").drawImage(bitmap,0,0,c.width,c.height);
- return await new Promise(r=>c.toBlob(r,"image/jpeg",0.78));
-}
-async function previewScreenshots(ev){
- pendingScreenshots=[...ev.target.files];
- const box=$("shotPreview");box.innerHTML="";
- for(const f of pendingScreenshots){const u=URL.createObjectURL(f);const img=document.createElement("img");img.src=u;img.onload=()=>URL.revokeObjectURL(u);box.appendChild(img)}
-}
-function openImageModal(url){$("modalImage").src=url;$("imageModal").classList.add("open")}
-function closeImageModal(){$("imageModal").classList.remove("open");$("modalImage").src=""}
-async function renderHistory(){
- const box=$("historyList");if(!box)return;
- const sorted=[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
- if(!sorted.length){box.innerHTML='<div class="note">記録なし</div>';return}
- box.innerHTML="";
- for(const e of sorted){
-  const shots=await getShots(e.id);
-  const div=document.createElement("div");div.className="entry";
-  div.innerHTML=`<div class="entry-title"><span>${esc(e.collab)}</span><span>${esc(e.date)}</span></div>
-   <div class="muted">${e.pulls}連 / UR 常設${e.urNormal}・コラボ${e.urCollab} / SR 常設${e.srNormal}・コラボ${e.srCollab}${e.exchangeUR?` / 交換UR ${e.exchangeUR}`:""}</div>
-   ${e.memo?`<div class="note">${esc(e.memo)}</div>`:""}
-   <div class="shotGrid"></div>
-   <div class="actions">
-    <label style="margin:0"><span class="pill">画像追加</span><input type="file" accept="image/*" multiple style="display:none"></label>
-    <button class="danger">記録を削除</button>
-   </div>`;
-  const grid=div.querySelector(".shotGrid");
-  for(const s of shots){
-   const u=URL.createObjectURL(s.blob),wrap=document.createElement("div");
-   wrap.innerHTML=`<img alt="スクショ"><button class="danger" style="width:100%;padding:6px;margin-top:3px">画像削除</button>`;
-   wrap.querySelector("img").src=u;wrap.querySelector("img").onclick=()=>openImageModal(u);
-   wrap.querySelector("button").onclick=async()=>{if(confirm("この画像を削除しますか？")){URL.revokeObjectURL(u);await deleteShot(s.id);renderHistory()}};
-   grid.appendChild(wrap);
-  }
-  const fileInput=div.querySelector('input[type=file]');
-  fileInput.onchange=async ev=>{for(const f of [...ev.target.files])await saveShot(e.id,await compressImage(f));renderHistory()};
-  div.querySelector(".actions > button").onclick=async()=>{if(confirm("このガチャ記録と画像を削除しますか？")){await deleteShotsForEntry(e.id);entries=entries.filter(x=>x.id!==e.id);localStorage.setItem("cg_entries",JSON.stringify(entries));render();renderHistory()}};
-  box.appendChild(div);
- }
-}
 
 function totals(list=entries){
  let t={pulls:0,urNormal:0,urCollab:0,srNormal:0,srCollab:0,exchangeUR:0};
@@ -347,7 +312,7 @@ function render(){
    <div class="note" style="margin-top:8px">${remain===0?"800連到達済み":`あと ${remain}連 / 60連単位なら ${batches}回（${batches*60}連）/ 約 ${needBM.toLocaleString()}BM`}</div></div>`
  }).join("");
 
- renderMoney(); setupReportSelectors(); renderReport(); renderHistory();
+ renderMoney(); setupReportSelectors(); renderReport(); renderRateHistory();
 }
 
 function buildTrendSvg(list){
@@ -364,17 +329,15 @@ function buildTrendSvg(list){
  <text x="${W-pad}" y="${H-10}" fill="#9fa7b7" font-size="12" text-anchor="end">${maxX}連</text></svg>`;
 }
 
-async function addEntry(){
+function addEntry(){
  const e={id:Date.now(),date:$("date").value,collab:$("collabName").value.trim(),pulls:+$("pulls").value,
  urNormal:+$("urNormal").value,urCollab:+$("urCollab").value,srNormal:+$("srNormal").value,srCollab:+$("srCollab").value,
- exchangeUR:+$("exchangeUR").value,screenshotSaved:pendingScreenshots.length>0,memo:$("memo").value.trim()};
+ exchangeUR:+$("exchangeUR").value,screenshotSaved:$("screenshotSaved").checked,memo:$("memo").value.trim()};
  if(!e.date||!e.collab||e.pulls<=0){alert("日付・コラボ名・連数を入力してください");return}
  if(e.urNormal+e.urCollab+e.srNormal+e.srCollab>e.pulls){alert("UR+SRが連数を超えています");return}
  entries.push(e);localStorage.setItem("cg_entries",JSON.stringify(entries));
- try{for(const f of pendingScreenshots)await saveShot(e.id,await compressImage(f))}catch(err){alert("記録は保存しましたが、一部画像の保存に失敗しました")}
  ["urNormal","urCollab","srNormal","srCollab","exchangeUR"].forEach(id=>$(id).value=0);
- $("collabName").value="";$("quickInput").value="";$("memo").value="";$("pulls").value=60;
- $("screenshotFiles").value="";$("shotPreview").innerHTML="";pendingScreenshots=[];
+ $("collabName").value="";$("quickInput").value="";$("memo").value="";$("screenshotSaved").checked=false;$("pulls").value=60;
  alert("保存しました");render();
 }
 
@@ -421,15 +384,60 @@ function renderReport(){
  <div style="margin-top:12px"><table><tr><th>種類</th><th>実績</th><th>期待</th><th>差</th><th>片側確率</th></tr>${rows}</table></div>`;
 }
 
+
+function parseRateText(v){
+ const m=String(v||"").match(/S(\d+)\/(\d+)/i);if(!m)return null;return rankPtToBp(+m[1],+m[2]);
+}
+function rankPtToBp(rank,pt){return 1500+(Number(rank)*500)+Number(pt||0)}
+function bpToRate(bp){
+ bp=Math.round(bp);if(bp>=6000)return `S9/${String(bp-6000).padStart(3,"0")}`;
+ let rank=Math.floor((bp-1500)/500);rank=Math.max(1,Math.min(9,rank));let pt=bp-(1500+rank*500);
+ return `S${rank}/${String(Math.max(0,pt)).padStart(3,"0")}`;
+}
+function quantile(a,q){const x=[...a].sort((m,n)=>m-n);if(!x.length)return 0;const pos=(x.length-1)*q,lo=Math.floor(pos),hi=Math.ceil(pos);return x[lo]+(x[hi]-x[lo])*(pos-lo)}
+function mergedRateHistory(target,day){
+ const map=new Map();
+ RATE_SEED.filter(r=>r.target===target&&r[day]&&r.final).forEach(r=>map.set(`${r.season}|${r.target}|${day}`,{season:r.season,target:r.target,day,checkpoint:r[day],final:r.final,exact:false,source:"cmns 5pt刻み"}));
+ rateCustom.filter(r=>+r.target===target&&r.day===day).forEach(r=>map.set(`${r.season}|${r.target}|${day}`,r));
+ return [...map.values()].map(r=>({...r,checkpointBp:parseRateText(r.checkpoint),finalBp:parseRateText(r.final)})).filter(r=>Number.isFinite(r.checkpointBp)&&Number.isFinite(r.finalBp));
+}
+function predictRate(){
+ const target=+$('rateTarget').value,day=$('rateDay').value,rank=+$('rateBorderRank').value,pt=+$('rateBorderPt').value||0,margin=Math.max(0,+$('rateMargin').value||0);
+ const current=rankPtToBp(rank,pt),all=mergedRateHistory(target,day);
+ if(!all.length){$('rateResult').innerHTML='<div class="note">比較できる過去データがありません。</div>';return}
+ const rows=all.map(r=>({...r,delta:r.finalBp-r.checkpointBp,distance:Math.abs(r.checkpointBp-current)})).sort((a,b)=>a.distance-b.distance);
+ const near=rows.slice(0,Math.min(10,rows.length));
+ let sumW=0,sumD=0;near.forEach((r,i)=>{const w=1/(r.distance+60)*(1+Math.max(0,10-i)*0.025);sumW+=w;sumD+=r.delta*w});
+ const avgDelta=sumD/sumW,deltas=near.map(r=>r.delta),pred=Math.round(current+avgDelta),low=Math.round(current+quantile(deltas,.25)),high=Math.round(current+quantile(deltas,.75));
+ const spread=Math.round(quantile(deltas,.75)-quantile(deltas,.25)),safe=pred+margin;
+ const selfRank=$('rateSelfRank').value,selfBp=selfRank?rankPtToBp(+selfRank,+$('rateSelfPt').value||0):null,need=selfBp==null?null:safe-selfBp;
+ ratePrefs={target,day,borderRank:rank,borderPt:pt,margin,selfRank:selfRank||"",selfPt:+$('rateSelfPt').value||0};localStorage.setItem('cg_rate_prefs',JSON.stringify(ratePrefs));
+ $('rateResult').innerHTML=`<div class="grid">
+  <div class="stat"><div class="muted">現在ボーダー</div><div class="big">${bpToRate(current)}</div><div class="muted">${current.toLocaleString()} BP</div></div>
+  <div class="stat"><div class="muted">最終予想・本命</div><div class="big gold">${bpToRate(pred)}</div><div class="muted">${pred.toLocaleString()} BP</div></div>
+  <div class="stat"><div class="muted">予想レンジ</div><div style="font-weight:800;margin-top:5px">${bpToRate(low)} ～ ${bpToRate(high)}</div><div class="muted">近い${near.length}シーズンの中央50%</div></div>
+  <div class="stat"><div class="muted">安全目標 +${margin}</div><div class="big blue">${bpToRate(safe)}</div><div class="muted">${safe.toLocaleString()} BP</div></div>
+ </div>
+ ${selfBp==null?'':`<div class="detailCard"><div class="entry-title"><span>自分 ${bpToRate(selfBp)}</span><span class="${need<=0?'good':'bad'}">${need<=0?'安全目標 +'+Math.abs(need)+'pt':'安全目標まで '+need+'pt'}</span></div></div>`}
+ <p class="note">比較データ ${all.length}件 / 使用 ${near.length}件 / 伸び幅の中央50%の幅 約${spread}pt。予想値は順位を保証するものではありません。</p>`;
+ $('rateSimilar').innerHTML=near.slice(0,5).map(r=>`<div class="entry"><div class="entry-title"><span>${esc(r.season)}</span><span>+${r.delta}pt</span></div><div class="note">${r.checkpoint} → ${r.final}　現在値との差 ${r.distance}pt　${r.exact?'正確値':'5pt刻み'}</div></div>`).join('');
+}
+function addRateHistory(){
+ const season=$('histSeason').value.trim(),target=+$('histTarget').value,day=$('histDay').value,cr=+$('histCheckpointRank').value,cp=+$('histCheckpointPt').value,fr=+$('histFinalRank').value,fp=+$('histFinalPt').value;
+ if(!season||!Number.isFinite(cp)||!Number.isFinite(fp)){alert('シーズン名・途中ボーダー・最終ボーダーを入力してください');return}
+ const item={id:Date.now(),season,target,day,checkpoint:`S${cr}/${String(cp).padStart(3,'0')}`,final:`S${fr}/${String(fp).padStart(3,'0')}`,exact:$('histExact').checked,source:'手動追加'};
+ rateCustom=rateCustom.filter(r=>!(r.season===season&&+r.target===target&&r.day===day));rateCustom.push(item);localStorage.setItem('cg_rate_history_custom',JSON.stringify(rateCustom));
+ $('histSeason').value='';$('histCheckpointPt').value='';$('histFinalPt').value='';renderRateHistory();predictRate();
+}
+function deleteRateHistory(id){if(confirm('この追加データを削除しますか？')){rateCustom=rateCustom.filter(r=>r.id!==id);localStorage.setItem('cg_rate_history_custom',JSON.stringify(rateCustom));renderRateHistory()}}
+function renderRateHistory(){
+ if(!$('rateHistoryList'))return;
+ $('rateHistoryList').innerHTML=rateCustom.length?[...rateCustom].reverse().map(r=>`<div class="entry"><div class="entry-title"><span>${esc(r.season)} ${r.target}位</span><span>${r.checkpoint} → ${r.final}</span></div><div class="note">${r.day==='fri'?'金曜':r.day==='wed'?'水曜':'月曜'} / ${r.exact?'正確値':'概算値'}</div><div class="actions"><button class="danger" onclick="deleteRateHistory(${r.id})">削除</button></div></div>`).join(''):'<div class="note">手動追加データなし</div>';
+}
+
 function saveSettings(){settings={ur:+$("rateUR").value,sr:+$("rateSR").value,cur:+$("rateCUR").value,bm:+$("bmPer60").value};localStorage.setItem("cg_settings",JSON.stringify(settings));render();alert("保存しました")}
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-async function exportJSON(){
- const db=await openImageDB();
- const shots=await new Promise((resolve,reject)=>{const req=db.transaction("shots","readonly").objectStore("shots").getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
- const images=[];
- for(const s of shots){const data=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(s.blob)});images.push({id:s.id,entryId:s.entryId,data})}
- dl("compass-gacha-full-backup.json",JSON.stringify({entries,purchases,settings,images},null,2),"application/json");
-}
+function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,purchases,settings,rateCustom,ratePrefs},null,2),"application/json")}
 function exportCSV(){
  const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,exchange_ur,screenshot_saved,memo\n";
  const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.exchangeUR,e.screenshotSaved,e.memo].map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -437,19 +445,10 @@ function exportCSV(){
 }
 function importJSON(ev){
  const f=ev.target.files[0];if(!f)return;const r=new FileReader();
- r.onload=async()=>{try{
-  const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;
-  localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));
-  if(Array.isArray(x.images)){
-   const db=await openImageDB(),tx=db.transaction("shots","readwrite"),store=tx.objectStore("shots");store.clear();
-   for(const im of x.images){const blob=await (await fetch(im.data)).blob();store.put({id:im.id,entryId:im.entryId,blob})}
-   await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
-  }
-  location.reload();
- }catch(err){alert("読み込みに失敗しました")}};
- r.readAsText(f);
+ r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];purchases=x.purchases||[];settings=x.settings||settings;rateCustom=x.rateCustom||rateCustom;ratePrefs=x.ratePrefs||ratePrefs;localStorage.setItem("cg_rate_history_custom",JSON.stringify(rateCustom));localStorage.setItem("cg_rate_prefs",JSON.stringify(ratePrefs));localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_purchases",JSON.stringify(purchases));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
 }
 render();
+if(!localStorage.getItem("cg_rate_prefs")){predictRate()}
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
 </body>
