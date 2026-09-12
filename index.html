@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16181f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>#コンパス ガチャ記録</title>
+<style>
+:root{--bg:#16181f;--card:#212531;--muted:#9fa7b7;--text:#f4f6f8;--accent:#ffd666;--line:#343a48;--good:#7bd88f;--bad:#ff8a8a}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+.wrap{max-width:900px;margin:auto;padding:18px 14px 90px}
+h1{font-size:24px;margin:8px 0 18px}.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;position:sticky;top:0;background:rgba(22,24,31,.95);padding:8px 0;backdrop-filter:blur(10px);z-index:5}
+button,.btn{border:0;border-radius:12px;padding:12px;background:#303646;color:white;font-weight:700}.tabs button.active{background:var(--accent);color:#111}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:#1b1e27;border-radius:14px;padding:14px}.big{font-size:25px;font-weight:800}.muted{color:var(--muted);font-size:13px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px} input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#171a22;color:white;font-size:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.primary{background:var(--accent);color:#111}.danger{background:#5a2a2a}.good{color:var(--good)}.bad{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 6px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+.hidden{display:none}.entry{padding:12px 0;border-bottom:1px solid var(--line)}.entry:last-child{border-bottom:0}.entry-title{display:flex;justify-content:space-between;gap:10px;font-weight:700}.actions{display:flex;gap:8px;margin-top:10px}.actions button{padding:8px 10px;font-size:12px}
+.note{font-size:12px;color:var(--muted);line-height:1.6}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>#コンパス ガチャ記録</h1>
+<div class="tabs">
+<button data-tab="home" class="active">集計</button>
+<button data-tab="add">追加</button>
+<button data-tab="collab">コラボ別</button>
+<button data-tab="history">履歴</button>
+<button data-tab="settings">設定</button>
+</div>
+
+<section id="home">
+  <div class="grid" id="stats"></div>
+  <div class="card">
+    <h3>公表確率との比較</h3>
+    <div id="compare"></div>
+  </div>
+</section>
+
+<section id="add" class="hidden">
+  <div class="card">
+    <h3>結果を追加</h3>
+    <label>日付</label><input id="date" type="date">
+    <label>コラボ名</label><input id="collabName" placeholder="例：陰の実力者になりたくて">
+    <label>連数</label><input id="pulls" type="number" min="1" value="60">
+    <div class="row">
+      <div><label>UR 常設</label><input id="urNormal" type="number" min="0" value="0"></div>
+      <div><label>UR コラボ</label><input id="urCollab" type="number" min="0" value="0"></div>
+    </div>
+    <div class="row">
+      <div><label>SR 常設</label><input id="srNormal" type="number" min="0" value="0"></div>
+      <div><label>SR コラボ</label><input id="srCollab" type="number" min="0" value="0"></div>
+    </div>
+    <label>メモ</label><textarea id="memo" rows="2" placeholder="任意"></textarea>
+    <button class="primary" style="width:100%;margin-top:14px" onclick="addEntry()">保存</button>
+  </div>
+</section>
+
+<section id="collab" class="hidden">
+  <div class="card"><div id="collabTable"></div></div>
+</section>
+
+<section id="history" class="hidden">
+  <div class="card"><div id="historyList"></div></div>
+</section>
+
+<section id="settings" class="hidden">
+  <div class="card">
+    <h3>設定・バックアップ</h3>
+    <label>UR 公表確率（%）</label><input id="rateUR" type="number" step="0.01" value="2">
+    <label>SR 公表確率（%）</label><input id="rateSR" type="number" step="0.01" value="18">
+    <label>コラボUR 公表確率（%）</label><input id="rateCUR" type="number" step="0.01" value="1">
+    <label>60連あたりBM</label><input id="bmPer60" type="number" value="5000">
+    <button class="primary" style="width:100%;margin-top:14px" onclick="saveSettings()">設定を保存</button>
+    <div class="actions">
+      <button onclick="exportJSON()">JSONバックアップ</button>
+      <button onclick="exportCSV()">CSV出力</button>
+    </div>
+    <label>JSONバックアップから復元</label><input id="importFile" type="file" accept=".json" onchange="importJSON(event)">
+    <p class="note">データはこのiPhoneのブラウザ内に保存されます。Safariのデータ削除などで消える可能性があるので、たまにJSONバックアップを保存してください。人類はバックアップを取らずに泣く歴史を何度も繰り返しています。</p>
+  </div>
+</section>
+</div>
+
+<script>
+const DEFAULT_ENTRIES = [
+ {id:1,date:"2026-07-27",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:3,srCollab:5,memo:""},
+ {id:2,date:"2026-07-28",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:2,srCollab:4,memo:""},
+ {id:3,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:1,urCollab:0,srNormal:5,srCollab:7,memo:""},
+ {id:4,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:0,urCollab:0,srNormal:9,srCollab:2,memo:""},
+ {id:5,date:"2026-08-01",collab:"雀魂",pulls:60,urNormal:1,urCollab:1,srNormal:6,srCollab:4,memo:""},
+ {id:6,date:"2026-08-28",collab:"陰の実力者になりたくて",pulls:60,urNormal:0,urCollab:2,srNormal:3,srCollab:3,memo:""},
+ {id:7,date:"2026-08-28",collab:"陰の実力者になりたくて",pulls:60,urNormal:0,urCollab:0,srNormal:6,srCollab:4,memo:""},
+ {id:8,date:"2026-09-01",collab:"陰の実力者になりたくて",pulls:180,urNormal:4,urCollab:0,srNormal:11,srCollab:18,memo:""}
+];
+let entries = JSON.parse(localStorage.getItem("cg_entries")||"null");
+if(!entries){entries=DEFAULT_ENTRIES;localStorage.setItem("cg_entries",JSON.stringify(entries))}
+let settings = JSON.parse(localStorage.getItem("cg_settings")||'{"ur":2,"sr":18,"cur":1,"bm":5000}');
+document.getElementById("rateUR").value=settings.ur;document.getElementById("rateSR").value=settings.sr;document.getElementById("rateCUR").value=settings.cur;document.getElementById("bmPer60").value=settings.bm;
+document.getElementById("date").value=new Date().toISOString().slice(0,10);
+
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+ document.querySelectorAll("section").forEach(s=>s.classList.add("hidden")); document.getElementById(b.dataset.tab).classList.remove("hidden");
+ render();
+});
+
+function totals(list=entries){
+ let t={pulls:0,urNormal:0,urCollab:0,srNormal:0,srCollab:0};
+ list.forEach(e=>Object.keys(t).forEach(k=>t[k]+=Number(e[k]||0)));
+ t.ur=t.urNormal+t.urCollab;t.sr=t.srNormal+t.srCollab;t.r=t.pulls-t.ur-t.sr;
+ return t;
+}
+const pct=(a,b)=>b?((a/b)*100).toFixed(2):"0.00";
+function render(){
+ const t=totals();
+ const bm=Math.round(t.pulls/60*settings.bm);
+ document.getElementById("stats").innerHTML=`
+  <div class="stat"><div class="muted">総連数</div><div class="big">${t.pulls}</div></div>
+  <div class="stat"><div class="muted">UR</div><div class="big">${t.ur}</div><div class="muted">${pct(t.ur,t.pulls)}%</div></div>
+  <div class="stat"><div class="muted">コラボUR</div><div class="big">${t.urCollab}</div><div class="muted">${pct(t.urCollab,t.pulls)}%</div></div>
+  <div class="stat"><div class="muted">SR</div><div class="big">${t.sr}</div><div class="muted">${pct(t.sr,t.pulls)}%</div></div>
+  <div class="stat"><div class="muted">R</div><div class="big">${t.r}</div><div class="muted">${pct(t.r,t.pulls)}%</div></div>
+  <div class="stat"><div class="muted">消費BM</div><div class="big">${bm.toLocaleString()}</div></div>`;
+ const rows=[
+   ["UR",settings.ur,t.ur],["SR",settings.sr,t.sr],["コラボUR",settings.cur,t.urCollab]
+ ].map(([n,r,a])=>{let ex=t.pulls*r/100,d=a-ex;return `<tr><td>${n}</td><td>${r}%</td><td>${ex.toFixed(1)}</td><td>${a}</td><td class="${d>=0?'good':'bad'}">${d>=0?'+':''}${d.toFixed(1)}</td></tr>`}).join("");
+ document.getElementById("compare").innerHTML=`<table><tr><th>種類</th><th>公表</th><th>期待値</th><th>実績</th><th>差</th></tr>${rows}</table>`;
+
+ const groups={}; entries.forEach(e=>(groups[e.collab]??=[]).push(e));
+ document.getElementById("collabTable").innerHTML=`<table><tr><th>コラボ</th><th>連数</th><th>UR</th><th>コラボUR</th><th>SR</th></tr>${
+ Object.entries(groups).map(([n,l])=>{let x=totals(l);return `<tr><td>${n}</td><td>${x.pulls}</td><td>${x.ur}</td><td>${x.urCollab}</td><td>${x.sr}</td></tr>`}).join("")
+ }</table>`;
+
+ document.getElementById("historyList").innerHTML=[...entries].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).map(e=>`
+ <div class="entry"><div class="entry-title"><span>${e.collab}</span><span>${e.date}</span></div>
+ <div class="muted">${e.pulls}連 / UR 常設${e.urNormal}・コラボ${e.urCollab} / SR 常設${e.srNormal}・コラボ${e.srCollab}</div>
+ ${e.memo?`<div class="note">${e.memo}</div>`:""}
+ <div class="actions"><button class="danger" onclick="deleteEntry(${e.id})">削除</button></div></div>`).join("");
+}
+function addEntry(){
+ const e={id:Date.now(),date:date.value,collab:collabName.value.trim(),pulls:+pulls.value,urNormal:+urNormal.value,urCollab:+urCollab.value,srNormal:+srNormal.value,srCollab:+srCollab.value,memo:memo.value.trim()};
+ if(!e.date||!e.collab||e.pulls<=0){alert("日付・コラボ名・連数を入力してください");return}
+ if(e.urNormal+e.urCollab+e.srNormal+e.srCollab>e.pulls){alert("UR+SRが連数を超えています");return}
+ entries.push(e);localStorage.setItem("cg_entries",JSON.stringify(entries));collabName.value="";memo.value="";urNormal.value=urCollab.value=srNormal.value=srCollab.value=0;pulls.value=60;alert("保存しました");render();
+}
+function deleteEntry(id){if(confirm("この記録を削除しますか？")){entries=entries.filter(e=>e.id!==id);localStorage.setItem("cg_entries",JSON.stringify(entries));render()}}
+function saveSettings(){settings={ur:+rateUR.value,sr:+rateSR.value,cur:+rateCUR.value,bm:+bmPer60.value};localStorage.setItem("cg_settings",JSON.stringify(settings));render();alert("保存しました")}
+function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function exportJSON(){dl("compass-gacha-backup.json",JSON.stringify({entries,settings},null,2),"application/json")}
+function exportCSV(){
+ const head="date,collab,pulls,ur_normal,ur_collab,sr_normal,sr_collab,memo\n";
+ const body=entries.map(e=>[e.date,e.collab,e.pulls,e.urNormal,e.urCollab,e.srNormal,e.srCollab,e.memo].map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+ dl("compass-gacha.csv","\ufeff"+head+body,"text/csv");
+}
+function importJSON(ev){
+ const f=ev.target.files[0]; if(!f)return; const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);entries=x.entries||[];settings=x.settings||settings;localStorage.setItem("cg_entries",JSON.stringify(entries));localStorage.setItem("cg_settings",JSON.stringify(settings));location.reload()}catch{alert("読み込みに失敗しました")}};r.readAsText(f);
+}
+render();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body>
+</html>
